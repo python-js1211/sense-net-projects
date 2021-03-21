@@ -3,12 +3,10 @@ tf = sensenet.importers.import_tensorflow()
 
 from sensenet.accessors import get_image_shape
 from sensenet.layers.construct import LAYER_FUNCTIONS
-from sensenet.layers.utils import make_sequence, propagate
+from sensenet.layers.utils import make_sequence, propagate, build_graph
 
-class YoloTrunk(tf.keras.layers.Layer):
+class YoloTrunk():
     def __init__(self, network, nclasses):
-        super(YoloTrunk, self).__init__()
-
         self._trunk = []
         self._concatenations = {}
 
@@ -19,7 +17,7 @@ class YoloTrunk(tf.keras.layers.Layer):
             if ltype == 'concatenate':
                 self._concatenations[i] = tuple(layer['inputs'])
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         outputs = []
         next_inputs = inputs
 
@@ -34,10 +32,8 @@ class YoloTrunk(tf.keras.layers.Layer):
 
         return outputs
 
-class YoloBranches(tf.keras.layers.Layer):
+class YoloBranches():
     def __init__(self, network, nclasses):
-        super(YoloBranches, self).__init__()
-
         self._nclasses = nclasses
         self._input_size = get_image_shape(network)[1]
         self._branches = []
@@ -79,13 +75,37 @@ class YoloBranches(tf.keras.layers.Layer):
 
         return conv_output, tf.concat([pred_xywh, pred_conf, pred_prob], axis=-1)
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         predictions = []
 
         for i, decoding_info, layers in self._branches:
             features = propagate(layers, inputs[i])
             predicted_values = self.decode_outputs(features, decoding_info)
 
+            predictions.append(predicted_values)
+
+        return predictions
+
+class Yolo(YoloBranches):
+    def __init__(self, network, nclasses):
+        self._nclasses = nclasses
+        self._input_size = get_image_shape(network)[1]
+        self._layers = network['layers']
+
+        self._branches = []
+        out_branches = network['metadata']['output_branches']
+
+        for i, branch in enumerate(out_branches):
+            d_info = [branch[k] for k in ['strides', 'anchors', 'xyscale']]
+            self._branches.append((branch['input'], d_info))
+
+    def __call__(self, inputs):
+        predictions = []
+        outputs = build_graph(self._layers, LAYER_FUNCTIONS, inputs)
+
+        for i, decoding_info in self._branches:
+            ith_output = outputs[i].output
+            predicted_values = self.decode_outputs(ith_output, decoding_info)
             predictions.append(predicted_values)
 
         return predictions

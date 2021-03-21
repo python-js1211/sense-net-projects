@@ -2,11 +2,12 @@ import os
 
 import sensenet.importers
 tf = sensenet.importers.import_tensorflow()
+kl = sensenet.importers.import_keras_layers()
 
 from sensenet.constants import IMAGE_STANDARDIZERS, WARP, PAD, CROP
 from sensenet.accessors import get_image_shape
-from sensenet.layers.utils import constant, propagate
-from sensenet.layers.construct import layer_sequence
+from sensenet.layers.utils import constant, build_graph
+from sensenet.layers.construct import LAYER_FUNCTIONS
 
 CONTRAST_LIMIT = 0.25
 EXPECTED_LOW = 255 * CONTRAST_LIMIT
@@ -125,22 +126,21 @@ def make_image_reader(settings, target_shape, return_original_dimensions):
 
     return read_image
 
-class ImageReader(tf.keras.layers.Layer):
+class ImageReader():
     def __init__(self, network, settings):
-        super(ImageReader, self).__init__()
-
         self._input_shape = get_image_shape(network)
         self._settings = settings
 
-    def build(self, input_shape):
-        self._read = make_image_reader(self._settings, self._input_shape, False)
+    def __call__(self, inputs):
+        read_fn = make_image_reader(self._settings, self._input_shape, False)
+        mapped_fn = lambda x: tf.map_fn(read_fn, x, fn_output_signature=tf.uint8)
+        read_layer = kl.Lambda(mapped_fn)
 
-    def call(self, inputs):
         if self._settings.input_image_format == 'pixel_values':
             dims = tf.constant(self._input_shape[1:3], tf.int32)
             images = rescale(self._settings, self._input_shape, inputs)
         else:
-            images = tf.map_fn(self._read, inputs, fn_output_signature=tf.uint8)
+            images = read_layer(inputs)
 
         return tf.cast(images, tf.float32)
 
@@ -148,10 +148,9 @@ class BoundingBoxImageReader(ImageReader):
     def __init__(self, network, settings):
         super(BoundingBoxImageReader, self).__init__(network, settings)
 
-    def build(self, input_shape):
+    def __call__(self, inputs):
         self._read = make_image_reader(self._settings, self._input_shape, True)
 
-    def call(self, inputs):
         if self._settings.input_image_format == 'pixel_values':
             dims = tf.constant(self._input_shape[1:3], tf.int32)
             image = rescale(self._settings, self._input_shape, inputs)
@@ -161,12 +160,13 @@ class BoundingBoxImageReader(ImageReader):
             # a time; if multiple files are passed in, all but the first
             # one are ignored.
             image, dims = self._read(inputs[0, 0])
+            image = tf.reshape(image, self._input_shape[1:])
             image = tf.expand_dims(image, axis=0)
             original_dims = tf.expand_dims(dims, axis=0)
 
         return tf.cast(image, tf.float32), original_dims
 
-class ImageLoader(tf.keras.layers.Layer):
+class ImageLoader():
     def __init__(self, network):
         super(ImageLoader, self).__init__()
 
@@ -180,7 +180,7 @@ class ImageLoader(tf.keras.layers.Layer):
         self._stdev = constant(std) if std != 1 else None
         self._mean_image = constant(mimg) if mimg is not None else None
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         images = inputs
 
         if self._reverse:
@@ -197,16 +197,15 @@ class ImageLoader(tf.keras.layers.Layer):
 
         return images
 
-class ImagePreprocessor(tf.keras.layers.Layer):
+class ImagePreprocessor():
     def __init__(self, image_network, settings):
-        super(ImagePreprocessor, self).__init__()
-
         self._reader = ImageReader(image_network, settings)
         self._loader = ImageLoader(image_network)
-        self._image_layers = layer_sequence(image_network)
+        self._image_layers = image_network['layers']
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         raw_images = self._reader(inputs)
         images = self._loader(raw_images)
+        outputs = build_graph(self._image_layers, LAYER_FUNCTIONS, images)
 
-        return propagate(self._image_layers, images)
+        return outputs[-1].output

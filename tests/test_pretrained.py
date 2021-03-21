@@ -12,6 +12,7 @@ from sensenet.load import load_points
 from sensenet.models.image import pretrained_image_model, image_feature_extractor
 from sensenet.models.image import image_layers, get_pretrained_network
 from sensenet.models.settings import Settings, ensure_settings
+from sensenet.models.wrappers import create_model
 from sensenet.preprocess.image import make_image_reader
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
@@ -137,3 +138,18 @@ def test_scaling():
 
     assert scores[0] > 0.9
     assert classes[0] == 2
+
+def test_full_model_read():
+    afile = 'mobilenetv2.json'
+    classifier = create_model(afile, EXTRA_PARAMS)
+    # preds = classifier([['dog.jpg']])
+    # print(preds[0,250:260])
+
+    print()
+    for layer in classifier._model.get_config()['layers']:
+        print(layer['name'], layer['inbound_nodes'])
+
+    # afile = 'tinyyolov4.json'
+    # detector = create_model(afile, EXTRA_PARAMS)
+    # boxes, scores, classes  = detector.predict([['strange_car.png']])
+    # print(boxes, scores, classes)

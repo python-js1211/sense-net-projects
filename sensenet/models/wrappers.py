@@ -27,18 +27,12 @@ def get_tf_model(model_or_spec, settings):
     elif isinstance(model_or_spec,(Deepnet, ObjectDetector)):
         return model_or_spec._model
     else:
-        if isinstance(model_or_spec, dict):
-            model_dict = model_or_spec
-        else:
-            with open(model_or_spec, 'r') as fin:
-                model_dict = json.load(fin)
-
         model_settings = ensure_settings(settings)
         # This is the only valid input format for tflite; it doesn't
         # know how to read files (as of TF 2.3)
         model_settings.input_image_format = 'pixel_values'
 
-        return create_model(model_dict, settings=export_settings)._model
+        return create_model(model_or_spec, settings=model_settings)._model
 
 def tflite_export(tf_model, model_path):
     converter = tf.lite.TFLiteConverter.from_keras_model(tf_model)
@@ -193,17 +187,29 @@ def bigml_resource(resource):
     except:
         return None
 
-def create_model(model, settings=None):
+def create_model(anobject, settings=None):
     settings_object = ensure_settings(settings)
 
-    if bigml_resource(model):
-        return create_model(bigml_resource(model), settings=settings)
-    elif is_deepnet(model):
+    if isinstance(anobject, str):
+        if os.path.exists(anobject):
+            with open(anobject, 'r') as fin:
+                model_dict = json.load(fin)
+        else:
+            raise IOError('File %s not found' % str(anobject))
+    elif isinstance(anobject, dict):
+        model_dict = anobject
+    else:
+        raise TypeError('Input argument cannot be a %s' % str(type(anobject)))
+
+    if bigml_resource(model_dict):
+        model = bigml_resource(model)
+    else:
+        model = model_dict
+
+    if is_deepnet(model):
         if is_yolo_model(model):
             return ObjectDetector(model, settings_object)
         else:
             return Deepnet(model, settings_object)
     elif isinstance(model, dict):
         raise ValueError('Model format not recognized: %s' % str(model.keys()))
-    else:
-        raise TypeError('`model` argument cannot be a %s' % str(type(model)))

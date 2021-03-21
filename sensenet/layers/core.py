@@ -88,6 +88,9 @@ def upsampling_2d(params):
 def concatenate(params):
     return kl.Concatenate()
 
+def add(params):
+    return kl.Add()
+
 def split_channels(params):
     n = params['number_of_splits']
     i = params['group_index']
@@ -99,6 +102,7 @@ CORE_LAYERS = {
     'average_pool_2d': avg_pool_2d,
     'batch_normalization': batchnorm,
     'concatenate': concatenate,
+    'add': add,
     'dense': dense,
     'dropout': dropout,
     'flatten': flatten,

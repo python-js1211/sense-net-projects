@@ -7,21 +7,17 @@ from sensenet.constants import PAD, MAX_OBJECTS
 from sensenet.constants import SCORE_THRESHOLD, IGNORE_THRESHOLD, IOU_THRESHOLD
 from sensenet.accessors import number_of_classes, get_image_shape
 from sensenet.accessors import get_image_tensor_shape
-from sensenet.layers.yolo import YoloTrunk, YoloBranches
+from sensenet.layers.yolo import YoloTrunk, YoloBranches, Yolo
 from sensenet.models.settings import ensure_settings
 from sensenet.preprocess.image import BoundingBoxImageReader, ImageLoader
 from sensenet.pretrained import load_pretrained_weights
 
-class BoxLocator(tf.keras.layers.Layer):
+class BoxLocator():
     def __init__(self, network, nclasses, settings):
-        super(BoxLocator, self).__init__()
-
-        assert network['layers'][-1]['type'] == 'yolo_output_branches'
-
         self._nclasses = nclasses
         self._input_shape = get_image_shape(network)[1:3]
 
-        ob = network['layers'][-1]['output_branches']
+        ob = network['metadata']['output_branches']
         self._strides = tuple([self._input_shape[0] // b['strides'] for b in ob])
         self._nanchors = tuple([len(b['anchors']) for b in ob])
 
@@ -49,7 +45,7 @@ class BoxLocator(tf.keras.layers.Layer):
     def reshape3d(self, x, nrows, ncols):
         return tf.reshape(x, (tf.shape(x)[0], nrows, ncols))
 
-    def call(self, predictions, original_shape):
+    def __call__(self, predictions, original_shape):
         box_bounds = []
         box_scores = []
 
@@ -116,8 +112,9 @@ def box_detector(model, input_settings):
     nclasses = number_of_classes(model)
     loader = ImageLoader(network)
 
-    yolo_trunk = YoloTrunk(network, nclasses)
-    yolo_branches = YoloBranches(network, nclasses)
+    # yolo_trunk = YoloTrunk(network, nclasses)
+    # yolo_branches = YoloBranches(network, nclasses)
+    yolo = Yolo(network, nclasses)
     locator = BoxLocator(network, nclasses, settings)
 
     if settings.input_image_format == 'pixel_values':
@@ -129,8 +126,9 @@ def box_detector(model, input_settings):
     raw_image, original_shape = reader(image_input)
 
     image = loader(raw_image)
-    layer_outputs = yolo_trunk(image)
-    predictions = yolo_branches(layer_outputs)
+    # layer_outputs = yolo_trunk(image)
+    # predictions = yolo_branches(layer_outputs)
+    predictions = yolo(image)
     all_outputs = locator(predictions, tf.cast(original_shape, tf.float32))
 
     return tf.keras.Model(inputs=image_input, outputs=all_outputs)

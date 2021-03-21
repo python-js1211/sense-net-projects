@@ -104,3 +104,24 @@ def propagate(layers, inputs):
             next_inputs = layer(next_inputs)
 
     return next_inputs
+
+def build_graph(layers_params, creation_functions, initial_inputs):
+    outputs = []
+    layers = []
+
+    if layers_params and len(layers_params) > 0:
+        for params in layers_params:
+            layer = creation_functions[params['type']](params)
+            input_idxs = params.get('inputs', [-1])
+
+            if len(outputs) == 0:
+                next_inputs = layer(initial_inputs)
+            elif len(input_idxs) == 1:
+                next_inputs = layer(outputs[input_idxs[0]])
+            else:
+                next_inputs = layer([outputs[idx] for idx in input_idxs])
+
+            outputs.append(next_inputs)
+            layers.append(layer)
+
+    return layers

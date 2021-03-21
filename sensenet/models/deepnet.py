@@ -21,11 +21,18 @@ def instantiate_inputs(model, settings):
     if ncols == 1 and settings.input_image_format == 'pixel_values':
         assert ptypes[0] == IMAGE_PATH
         image_shape = get_image_tensor_shape(settings)
-        return kl.Input(image_shape, dtype=tf.float32, name='image')
+
+        return kl.Input(image_shape,
+                        dtype=tf.float32,
+                        name='image_pixel_inputs')
     else:
         return {
-            'numeric': kl.Input((ncols,), dtype=tf.float32, name='numeric'),
-            'string': kl.Input((nstrings,), dtype=tf.string, name='string')
+            'numeric': kl.Input((ncols,),
+                                dtype=tf.float32,
+                                name='numeric_inputs'),
+            'string': kl.Input((nstrings,),
+                               dtype=tf.string,
+                               name='string_inputs')
         }
 
 def apply_layers(model, settings, inputs, treeed_inputs):

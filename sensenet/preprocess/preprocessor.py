@@ -8,9 +8,8 @@ from sensenet.preprocess.numeric import NumericPreprocessor
 from sensenet.preprocess.numeric import BinaryPreprocessor
 from sensenet.preprocess.image import ImagePreprocessor
 
-class Preprocessor(tf.keras.layers.Layer):
+class Preprocessor():
     def __init__(self, model, extras):
-        super(Preprocessor, self).__init__()
         self._preprocessors = []
 
         if model.get('image_network', None) is not None:
@@ -33,7 +32,7 @@ class Preprocessor(tf.keras.layers.Layer):
                 raise ValueError('Cannot make processor with type "%s"' % ptype)
 
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         str_idx = 0
         processed = []
 
@@ -47,17 +46,16 @@ class Preprocessor(tf.keras.layers.Layer):
         for i, pp in enumerate(self._preprocessors):
             if isinstance(pp, (ImagePreprocessor, CategoricalPreprocessor)):
                 if string_inputs is not None:
-                    processed.append(pp(string_inputs[:,str_idx]))
+                    ith_string = tf.reshape(string_inputs[:,str_idx], (-1,))
                     str_idx += 1
+                    processed.append(pp(ith_string))
                 elif isinstance(pp, ImagePreprocessor):
                     processed.append(pp(numeric_inputs))
             else:
-                processed.append(pp(numeric_inputs[:,i]))
+                ith_numeric = tf.reshape(numeric_inputs[:, i], (-1,))
+                processed.append(pp(ith_numeric))
 
         if len(processed) > 1:
             return tf.concat(processed, -1)
         else:
             return processed[0]
-
-    def get_image_layers(self):
-        return self._image_preprocessor._image_layers
