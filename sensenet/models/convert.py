@@ -20,12 +20,23 @@ IMAGE_LAYER_STARTS = {
 }
 
 IMAGE_LAYER_ENDS = {
-    'tinyyolov4': ['Conv2D', -1]
+    'tinyyolov4': ['Conv2D', -1],
+    'yolov4': ['Conv2D', -1]
 }
 
 TEMP_WEIGHTS = 'weights.h5'
 FEATURIZER_FORMAT = '%s_extractor_%s.h5'
 WEIGHTS_FORMAT = '%s_weights_%s.h5'
+
+ALL_NETWORKS = [
+    'yolov4',
+    'mobilenet',
+    'mobilenetv2',
+    'resnet18',
+    'resnet50',
+    'xception',
+    'tinyyolov4'
+]
 
 def finalize(layers):
     for layer in layers[1:]:
@@ -75,6 +86,7 @@ def file_hash(filename):
     return sha256_hash.hexdigest()[:8]
 
 def generate_artifacts(network_name):
+    print('Reading...')
     with open(os.path.join(FILE_PREFIX, network_name + '.json'), 'r') as fin:
         shell = json.load(fin)
 
@@ -83,16 +95,18 @@ def generate_artifacts(network_name):
         'rescale_type': CROP
     }
 
+    print('Creating model...')
     model = create_model(shell, settings)._model
     image_layers = extract_image_layers(model, network_name)
 
+    print('Saving weights...')
     model.save_weights(TEMP_WEIGHTS)
     version = file_hash(TEMP_WEIGHTS)
     os.rename(TEMP_WEIGHTS, WEIGHTS_FORMAT % (network_name, version))
 
+    print('Writing featurizer...')
     if 'yolo' not in network_name:
         shell['layers'] = remove_weights(extract(model, ['Dense', 0], None))
-        print(shell['layers'])
         end_idx = index_in_model(model, 'GlobalAveragePooling2D', -1)
         f_end = model.layers[end_idx].output
 
@@ -106,4 +120,15 @@ def generate_artifacts(network_name):
     shell['image_network']['metadata'].pop('mean_image', None)
     shell['image_network']['metadata']['rescale_type'] = CROP
 
+    print('Done.')
     return shell
+
+def all_artifacts():
+    outmap = {}
+
+    for network in ALL_NETWORKS:
+        print(network)
+        shell = generate_artifacts(network)
+        outmap[network] = shell
+
+    return outmap

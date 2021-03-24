@@ -93,9 +93,8 @@ class Yolo(YoloBranches):
         self._layers = network['layers']
 
         self._branches = []
-        out_branches = network['metadata']['output_branches']
 
-        for i, branch in enumerate(out_branches):
+        for branch in network['metadata']['outputs']:
             d_info = [branch[k] for k in ['strides', 'anchors', 'xyscale']]
             self._branches.append((branch['input'], d_info))
 

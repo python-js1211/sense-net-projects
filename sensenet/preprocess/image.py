@@ -185,11 +185,10 @@ class BoundingBoxImageReader(ImageReader):
 
 class ImageLoader():
     def __init__(self, network):
-        super(ImageLoader, self).__init__()
-
         metadata = network['metadata']
         method = metadata['loading_method']
-        mimg = metadata['mean_image']
+        mimg = metadata.get('mean_image', None)
+
         mean, std = IMAGE_STANDARDIZERS[method]
 
         self._reverse = method == 'channelwise_centering'

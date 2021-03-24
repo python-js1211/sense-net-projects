@@ -17,7 +17,7 @@ class BoxLocator():
         self._nclasses = nclasses
         self._input_shape = get_image_shape(network)[1:3]
 
-        ob = network['metadata']['output_branches']
+        ob = network['metadata']['outputs']
         self._strides = tuple([self._input_shape[0] // b['strides'] for b in ob])
         self._nanchors = tuple([len(b['anchors']) for b in ob])
 
