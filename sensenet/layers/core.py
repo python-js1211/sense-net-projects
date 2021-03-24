@@ -95,7 +95,11 @@ def split_channels(params):
     n = params['number_of_splits']
     i = params['group_index']
 
-    return kl.Lambda(lambda x: tf.split(x, num_or_size_splits=n, axis=-1)[i])
+    ith_split = lambda x: tf.split(x, num_or_size_splits=n, axis=-1)[i]
+    # Naming the function here for deserialization later
+    ith_split.__name__ = 'split_%d_of_%d' % (i, n)
+
+    return kl.Lambda(ith_split)
 
 CORE_LAYERS = {
     'activation': activation,

@@ -23,7 +23,7 @@ def scale_for_box(input_dims, target_dims, minimum):
         return tf.math.maximum(x_scale, y_scale)
 
 def resize_with_crop_or_pad(settings, target_dims, image):
-    pad_only = settings.rescale_type == PAD
+    pad_only = tf.constant(settings.rescale_type == PAD)
 
     # Assume target_dims are [h, w, channels]
     if len(image.shape) == 3:
@@ -50,7 +50,17 @@ def resize_with_crop_or_pad(settings, target_dims, image):
         return tf.pad(scaled, pad, constant_values=tf.reduce_mean(scaled))
     else:
         height, width = target_dims[0], target_dims[1]
-        return tf.image.resize_with_crop_or_pad(image, height, width)
+        hbeg = tf.cast((scaled_dims[0] - height) / 2, tf.int32)
+        wbeg = tf.cast((scaled_dims[1] - width) / 2, tf.int32)
+        hend = hbeg + height
+        wend = wbeg + width
+
+        if len(image.shape) == 3:
+            return scaled[hbeg:hend,wbeg:wend,:]
+        elif len(image.shape) == 4:
+            return scaled[:,hbeg:hend,wbeg:wend,:]
+        else:
+            raise ValueError('Image tensor is rank %d' % len(image.shape))
 
 # Unused right now, but I'll leave it here just in case
 def adjust_contrast(image):
@@ -85,7 +95,14 @@ def rescale(settings, target_shape, image):
         else:
             raise ValueError('Image tensor is rank %d' % len(image.shape))
     elif image.shape[-1] != 3:
-        raise ValueError('Number of color channels is %d' % image.shape[-1])
+        raise ValueError('Number of color channels is %d' % new_image.shape[-1])
+
+    if len(image.shape) == 4:
+        new_image.set_shape([None, None, None, 3])
+    elif len(image.shape) == 3:
+        new_image.set_shape([None, None, 3])
+    else:
+        raise ValueError('Image tensor is rank %d' % len(image.shape))
 
     if settings.color_space and settings.color_space.lower().startswith('bgr'):
         return tf.reverse(new_image, axis=[-1])

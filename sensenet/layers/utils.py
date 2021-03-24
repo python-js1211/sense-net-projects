@@ -5,11 +5,22 @@ kl = sensenet.importers.import_keras_layers()
 
 from sensenet.constants import LEAKY_RELU_ALPHA
 
+# Custom activations need to be mapped to named functions, so when we
+# extract them from the model we can grab the function's name with
+# `Layer.function.__name__`
+def leaky_relu(x):
+    return tf.nn.leaky_relu(x, alpha=LEAKY_RELU_ALPHA)
+
+def mish(x):
+    return x * tf.math.tanh(tf.math.softplus(x))
+
+def relu6(x):
+    return tf.nn.relu6(x)
+
 ACTIVATORS = {
-    'leaky_relu': lambda x: tf.nn.leaky_relu(x, alpha=LEAKY_RELU_ALPHA),
-    'mish': lambda x: x * tf.math.tanh(tf.math.softplus(x)),
-    'relu6': tf.nn.relu6,
-    'swish': lambda x: x * tf.sigmoid(x)
+    'leaky_relu': leaky_relu,
+    'mish': mish,
+    'relu6': relu6
 }
 
 # The names of the trainable parameters in any layer
