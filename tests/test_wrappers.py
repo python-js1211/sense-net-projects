@@ -62,8 +62,10 @@ def test_channel_order():
         assert np.all(np.abs(alpha - no_alpha) < 1e-4)
 
 def test_cropping():
-    for rt, threshold in [('warp', 0.98), ('pad', 0.96), ('crop', 0.97)]:
+    for rt, threshold in [('warp', 0.98), ('pad', 0.96), ('crop', 0.98)]:
+        print(rt, threshold)
         settings = {'rescale_type': rt}
         pred = check_pixels_and_file(settings, threshold, 0.02)
+        pred_value = pred[0, BUS_INDEX]
 
-        assert threshold < pred[0, BUS_INDEX] < threshold + 0.01
+        assert threshold < pred_value < threshold + 0.01, pred_value
