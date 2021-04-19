@@ -64,7 +64,7 @@ def test_simple_tree_prediction():
     # paths = to_paths(leaves)
     # outputs = propagate(paths, np.array(test_points, dtype=np.float32))
 
-    tree = DecisionTree(test_tree)
+    tree = DecisionTree(tree=test_tree)
     preds1 = tree(constant(test_points))
     preds2 = tree(constant(test_points))
 
@@ -124,10 +124,11 @@ def test_predictions():
     sk_time = time.time() - start
 
     trees = trees_to_list(ensemble)
-    forest = DecisionForest(trees)
+    forest = DecisionForest(forest=trees)
     inten = tf.keras.Input((8,), dtype=tf.float32)
     outten = forest(inten)
     model = tf.keras.Model(inputs=inten, outputs=outten)
+    mod_preds = model(points).numpy()
 
     start = time.time()
     mod_preds = model(points).numpy()
