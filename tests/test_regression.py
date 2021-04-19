@@ -1,5 +1,6 @@
 import os
 import json
+import time
 
 import sensenet.importers
 np = sensenet.importers.import_numpy()
@@ -24,25 +25,50 @@ SEARCH = 'search_regression.json.gz'
 LEGACY_SEARCH = 'legacy_search_regression.json.gz'
 IMAGE = 'image_regression.json.gz'
 TEMP_WEIGHTS = os.path.join(TEST_DATA_DIR, 'test_save_weights.h5')
+TEMP_BUNDLE = os.path.join(TEST_DATA_DIR, 'test_save_bundle.smbundle')
 
 EXTRA_PARAMS = Settings({'image_path_prefix': TEST_DATA_DIR + 'images/digits/'})
 
-def round_trip(settings, wrapper):
+def remove_temp_files():
+    for afile in [TEMP_WEIGHTS, TEMP_BUNDLE]:
+        try:
+            os.remove(afile)
+        except OSError:
+            pass
+
     assert not os.path.exists(TEMP_WEIGHTS)
+    assert not os.path.exists(TEMP_BUNDLE)
+
+def round_trip(settings, wrapper):
+    remove_temp_files()
 
     short = remove_weights(settings)
     # Assure we get a small network short network even when the network is big
     max_len = min(128000, len(json.dumps(settings)))
     assert len(json.dumps(short)) < max_len
 
+    # start = time.time()
     wrapper._model.save_weights(TEMP_WEIGHTS)
+    # print('save weights: %.2f' % (time.time() - start))
+    # start = time.time()
     new_wrapper = create_model(short, EXTRA_PARAMS)
+    # print('recreate model: %.2f' % (time.time() - start))
+    # start = time.time()
     new_wrapper._model.load_weights(TEMP_WEIGHTS)
+    # print('load weights: %.2f' % (time.time() - start))
+    # print(os.path.getsize(TEMP_WEIGHTS))
 
-    os.remove(TEMP_WEIGHTS)
-    assert not os.path.exists(TEMP_WEIGHTS)
+    # start = time.time()
+    new_wrapper.save_bundle(TEMP_BUNDLE)
+    # print('save bundle: %.2f' % (time.time() - start))
+    # start = time.time()
+    bundle_wrapper = create_model(TEMP_BUNDLE)
+    # print('load bundle: %.2f' % (time.time() - start))
+    # print(os.path.getsize(TEMP_BUNDLE))
 
-    return new_wrapper
+    remove_temp_files()
+
+    return bundle_wrapper
 
 def compare_predictions(model, ins, expected):
     mod_preds = model(ins)
@@ -67,7 +93,9 @@ def validate_predictions(test_artifact):
 
     for i, true_pred in enumerate(outs):
         mod_pred = model([ins[i]])
+        remod_pred = remodel([ins[i]])
         legacy_pred = legacy_model(ins[i])
+        legacy_remod_pred = legacy_remodel(ins[i])
 
         outstr = '\nPred: %s\nExpt: %s' % (str(mod_pred[0]), str(true_pred))
         legstr = '\nLegacy: %s\nExpt: %s' % (str(legacy_pred[0]), str(true_pred))
@@ -75,9 +103,15 @@ def validate_predictions(test_artifact):
         assert np.allclose(mod_pred[0], true_pred, atol=1e-7), outstr
         assert np.allclose(legacy_pred[0], true_pred, atol=1e-7), legstr
 
+    # start = time.time()
     compare_predictions(model, ins, outs)
+    # print('model preds: %.2f' % (time.time() - start))
+    # start = time.time()
     compare_predictions(remodel, ins, outs)
+    # print('remodel preds: %.2f' % (time.time() - start))
+    # start = time.time()
     compare_predictions(legacy_remodel, ins, outs)
+    # print('legacy remodel preds: %.2f' % (time.time() - start))
 
 def single_artifact(regression_path, index):
     test_artifact = read_regression(regression_path)[index]
@@ -96,7 +130,7 @@ def test_legacy_networks():
         yield single_artifact, LEGACY, i
 
 def test_one():
-    single_artifact(SIMPLE, 0)
+    single_artifact(SIMPLE, 1)
 
 def fake_outex(test_info):
     anode = test_info['trees'][0][1][0]
@@ -115,7 +149,7 @@ def single_embedding(index):
     test_info['output_exposition'] = fake_outex(test_info)
 
     preprocessor = Preprocessor(test_info, EXTRA_PARAMS)
-    forest = ForestPreprocessor(test_info)
+    forest = ForestPreprocessor(trees=test_info['trees'])
 
     inputs = load_points(test_info['preprocess'], test_info['input_data'])
     proc_result = preprocessor(inputs)

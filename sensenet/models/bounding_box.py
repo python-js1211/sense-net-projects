@@ -7,7 +7,7 @@ from sensenet.constants import PAD, MAX_OBJECTS
 from sensenet.constants import SCORE_THRESHOLD, IGNORE_THRESHOLD, IOU_THRESHOLD
 from sensenet.accessors import number_of_classes, get_image_shape
 from sensenet.accessors import get_image_tensor_shape
-from sensenet.layers.yolo import YoloTrunk, YoloBranches, Yolo
+from sensenet.layers.yolo import Yolo
 from sensenet.models.settings import ensure_settings
 from sensenet.preprocess.image import BoundingBoxImageReader, ImageLoader
 from sensenet.pretrained import load_pretrained_weights
@@ -72,7 +72,7 @@ class BoxLocator():
         img_scores = tf.reshape(scores, (nboxes, self._nclasses))
 
         max_dim = tf.reduce_max(original_shape[0][:2], axis=-1, name='mdim')
-        scaled_boxes = tf.math.round(img_boxes * max_dim, name='boxes')
+        scaled_boxes = tf.math.round(img_boxes * max_dim, name='scaled_boxes')
         classes = tf.cast(tf.argmax(img_scores, axis=1), tf.int32)
 
         scores_shape = tf.shape(img_scores)
@@ -97,9 +97,9 @@ class BoxLocator():
 
         xyxy_boxes = tf.gather(selected_boxes, [1,0,3,2], axis=-1)
 
-        final_boxes = tf.expand_dims(xyxy_boxes, axis=0)
-        final_scores = tf.expand_dims(selected_scores, axis=0)
-        final_classes = tf.expand_dims(selected_classes, axis=0)
+        final_boxes = tf.expand_dims(xyxy_boxes, axis=0, name='boxes')
+        final_scores = tf.expand_dims(selected_scores, axis=0, name='scores')
+        final_classes = tf.expand_dims(selected_classes, axis=0, name='classes')
 
         return final_boxes, final_scores, final_classes
 
@@ -112,22 +112,20 @@ def box_detector(model, input_settings):
     nclasses = number_of_classes(model)
     loader = ImageLoader(network)
 
-    # yolo_trunk = YoloTrunk(network, nclasses)
-    # yolo_branches = YoloBranches(network, nclasses)
     yolo = Yolo(network, nclasses)
     locator = BoxLocator(network, nclasses, settings)
 
     if settings.input_image_format == 'pixel_values':
         image_shape = get_image_tensor_shape(settings)
-        image_input = kl.Input(image_shape, dtype=tf.float32, name='image')
+        image_input = kl.Input(image_shape,
+                               dtype=tf.float32,
+                               name='image_pixel_inputs')
     else:
-        image_input = kl.Input((1,), dtype=tf.string, name='image')
+        image_input = kl.Input((1,), dtype=tf.string, name='image_path')
 
     raw_image, original_shape = reader(image_input)
 
     image = loader(raw_image)
-    # layer_outputs = yolo_trunk(image)
-    # predictions = yolo_branches(layer_outputs)
     predictions = yolo(image)
     all_outputs = locator(predictions, tf.cast(original_shape, tf.float32))
 

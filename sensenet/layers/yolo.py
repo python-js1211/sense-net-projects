@@ -3,34 +3,7 @@ tf = sensenet.importers.import_tensorflow()
 
 from sensenet.accessors import get_image_shape
 from sensenet.layers.construct import LAYER_FUNCTIONS
-from sensenet.layers.utils import make_sequence, propagate, build_graph
-
-class YoloTrunk():
-    def __init__(self, network, nclasses):
-        self._trunk = []
-        self._concatenations = {}
-
-        for i, layer in enumerate(network['layers'][:-1]):
-            ltype = layer['type']
-            self._trunk.append(LAYER_FUNCTIONS[ltype](layer))
-
-            if ltype == 'concatenate':
-                self._concatenations[i] = tuple(layer['inputs'])
-
-    def __call__(self, inputs):
-        outputs = []
-        next_inputs = inputs
-
-        for i, layer in enumerate(self._trunk):
-            if i in self._concatenations:
-                inputs = self._concatenations[i]
-                next_inputs = layer([outputs[j] for j in inputs])
-            else:
-                next_inputs = layer(next_inputs)
-
-            outputs.append(next_inputs)
-
-        return outputs
+from sensenet.layers.utils import build_graph
 
 class YoloBranches():
     def __init__(self, network, nclasses):

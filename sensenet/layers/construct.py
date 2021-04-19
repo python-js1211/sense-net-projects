@@ -3,9 +3,9 @@ tf = sensenet.importers.import_tensorflow()
 
 from sensenet.layers.block import SIMPLE_LAYERS, BLOCKS
 from sensenet.layers.convolutional import CONVOLUTIONAL_LAYERS, get_shape_params
-from sensenet.layers.legacy import make_legacy_sequence
+from sensenet.layers.legacy import build_legacy_graph
 from sensenet.layers.tree import ForestPreprocessor
-from sensenet.layers.utils import make_sequence, propagate, WEIGHT_INITIALIZERS
+from sensenet.layers.utils import WEIGHT_INITIALIZERS, build_graph
 
 LAYER_FUNCTIONS = {}
 LAYER_FUNCTIONS.update(SIMPLE_LAYERS)
@@ -15,18 +15,17 @@ WEIGHTED_LAYERS = set()
 WEIGHTED_LAYERS.update((CONVOLUTIONAL_LAYERS.keys()))
 WEIGHTED_LAYERS.update(['dense', 'batch_normalization'])
 
-
-def layer_sequence(model):
-    layers_params = model['layers']
-
-    if any(p.get('type', None) == None for p in layers_params):
-        return make_legacy_sequence(layers_params)
+def feed_through(layers, inputs):
+    if any(layer.get('type', None) is None for layer in layers):
+        graph = build_legacy_graph(layers, inputs)
     else:
-        return make_sequence(layers_params, LAYER_FUNCTIONS)
+        graph = build_graph(layers, LAYER_FUNCTIONS, inputs)
+
+    return graph[-1].output
 
 def tree_preprocessor(model):
     if model.get('trees', None):
-        return ForestPreprocessor(model)
+        return ForestPreprocessor(trees=model['trees'])
     else:
         return None
 

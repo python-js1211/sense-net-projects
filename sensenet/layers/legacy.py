@@ -3,8 +3,39 @@ np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 kl = sensenet.importers.import_keras_layers()
 
-from sensenet.layers.utils import transpose, activation_function
-from sensenet.layers.core import dense, batchnorm
+from sensenet.layers.utils import transpose, activation_function, get_units
+
+def dense_with_weights(params):
+    imap = {}
+
+    for key in ['weights', 'offset']:
+        if isinstance(params[key], str):
+            imap[key] = params[key]
+        else:
+            imap[key] = tf.constant_initializer(np.array(params[key]))
+
+    return kl.Dense(get_units(params),
+                    dtype=tf.float32,
+                    activation=activation_function(params),
+                    use_bias=True,
+                    kernel_initializer=imap['weights'],
+                    bias_initializer=imap['offset'])
+
+def batchnorm_with_weights(params):
+    imap = {}
+
+    for key in ['beta', 'gamma', 'mean', 'variance']:
+        if isinstance(params[key], str):
+            imap[key] = params[key]
+        else:
+            imap[key] = tf.constant_initializer(np.array(params[key]))
+
+    return kl.BatchNormalization(dtype=tf.float32,
+                                 epsilon=params.get('epsilon', 1e-3),
+                                 beta_initializer=imap['beta'],
+                                 gamma_initializer=imap['gamma'],
+                                 moving_mean_initializer=imap['mean'],
+                                 moving_variance_initializer=imap['variance'])
 
 def with_popped_activation(params):
     afn = activation_function(params)
@@ -13,17 +44,17 @@ def with_popped_activation(params):
 
     return params_copy, afn
 
-class LegacyBlock(tf.keras.layers.Layer):
+class LegacyBlock():
     def __init__(self, params):
         super(LegacyBlock, self).__init__()
 
         dense_params, afn = with_popped_activation(params)
 
-        self._dense = dense(dense_params)
-        self._bnorm = batchnorm(params)
+        self._dense = dense_with_weights(dense_params)
+        self._bnorm = batchnorm_with_weights(params)
         self._activator = kl.Activation(afn)
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         propigated = self._dense(inputs)
         normalized = self._bnorm(propigated)
 
@@ -50,9 +81,9 @@ def legacy(params):
 
         return LegacyBlock(dense_params)
     else:
-        return dense(dense_params)
+        return dense_with_weights(dense_params)
 
-class LegacyResidualBlock(tf.keras.layers.Layer):
+class LegacyResidualBlock():
     def __init__(self, params_list):
         super(LegacyResidualBlock, self).__init__()
 
@@ -83,7 +114,7 @@ class LegacyResidualBlock(tf.keras.layers.Layer):
 
             return tf.concat(to_concat, -1)
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         first_out = self._first(inputs)
         residuals = self._second(first_out)
 
@@ -92,7 +123,7 @@ class LegacyResidualBlock(tf.keras.layers.Layer):
 
         return self._activator(outputs)
 
-def make_legacy_sequence(layers_params):
+def build_legacy_graph(layers_params, initial_inputs):
     layers = []
     use_next = True
 
@@ -108,6 +139,11 @@ def make_legacy_sequence(layers_params):
                 use_next = False
             else:
                 layer = legacy(lp)
+
+            if len(layers) == 0:
+                next_inputs = layer(initial_inputs)
+            else:
+                next_inputs = layer(next_inputs)
 
             layers.append(layer)
         else:

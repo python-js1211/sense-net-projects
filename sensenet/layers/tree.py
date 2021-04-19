@@ -21,35 +21,32 @@ def into_arrays(node, all_nodes, outputs):
         this_node[3] = len(all_nodes)
         into_arrays(node[3], all_nodes, outputs)
 
-class DecisionNode(tf.keras.layers.Layer):
-    def __init__(self, tree):
-        super(DecisionNode, self).__init__()
+class DecisionNode():
+    def __init__(self, **kwargs):
+        self._tree = kwargs['tree']
+        assert len(self._tree) == 2 and self._tree[-1] is None
+        self._outputs = self._tree[0]
 
-        assert len(tree) == 2 and tree[-1] is None
-        self._outputs = tree[0]
+    def __call__(self, inputs):
+        output_tensor = tf.reshape(constant(self._outputs), [1, -1])
+        return tf.tile(output_tensor, [tf.shape(inputs)[0], 1])
 
-    def build(self, input_shape):
-        self._output_tensor = tf.reshape(constant(self._outputs), [1, -1])
-
-    def call(self, inputs):
-        return tf.tile(self._output_tensor, [tf.shape(inputs)[0], 1])
-
-class DecisionTree(tf.keras.layers.Layer):
-    def __init__(self, tree):
-        super(DecisionTree, self).__init__()
+class DecisionTree():
+    def __init__(self, **kwargs):
+        self._tree = kwargs['tree']
 
         node_list = []
         outputs = []
 
-        into_arrays(tree, node_list, outputs)
+        into_arrays(self._tree, node_list, outputs)
 
-        self._split_indices = constant([n[0] for n in node_list], tf.int32)
-        self._split_values = constant([n[1] for n in node_list])
-        self._left = constant([n[2] for n in node_list], tf.int32)
-        self._right = constant([n[3] for n in node_list], tf.int32)
-        self._outputs = constant(outputs)
+        self._split_indices = np.array([n[0] for n in node_list], dtype=np.int32)
+        self._split_values = np.array([n[1] for n in node_list], dtype=np.float32)
+        self._left = np.array([n[2] for n in node_list], dtype=np.int32)
+        self._right = np.array([n[3] for n in node_list], dtype=np.int32)
+        self._outputs = np.array(outputs, dtype=np.float32)
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         out_idxs = tl.BigMLTreeify(points=inputs,
                                    split_indices=self._split_indices,
                                    split_values=self._split_values,
@@ -58,38 +55,39 @@ class DecisionTree(tf.keras.layers.Layer):
 
         return tf.gather(self._outputs, tf.reshape(out_idxs, (-1,)))
 
-class DecisionForest(tf.keras.layers.Layer):
-    def __init__(self, trees):
-        super(DecisionForest, self).__init__()
-
+class DecisionForest():
+    def __init__(self, **kwargs):
+        self._forest = kwargs['forest']
         self._trees = []
 
-        for tree in trees:
+        for tree in self._forest:
             if len(tree) == 2 and tree[-1] is None:
-                self._trees.append(DecisionNode(tree))
+                self._trees.append(DecisionNode(tree=tree))
             else:
-                self._trees.append(DecisionTree(tree))
+                self._trees.append(DecisionTree(tree=tree))
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         all_preds = []
 
         for tree in self._trees:
             preds = tree(inputs)
             all_preds.append(preds)
 
-        summed = tf.math.accumulate_n(all_preds)
+        summed = tf.math.add_n(all_preds)
 
         return summed / len(all_preds)
 
 class ForestPreprocessor(tf.keras.layers.Layer):
-    def __init__(self, model):
-        super(ForestPreprocessor, self).__init__()
+    def __init__(self, **kwargs):
+        newargs = dict(kwargs)
+        self._trees = newargs.pop('trees')
+        super().__init__(**newargs)
 
         self._forests = []
         self._ranges = []
 
-        for input_range, trees in model['trees']:
-            self._forests.append([input_range, DecisionForest(trees)])
+        for input_range, trees in self._trees:
+            self._forests.append([input_range, DecisionForest(forest=trees)])
 
     def call(self, inputs):
         all_preds = []
@@ -100,3 +98,9 @@ class ForestPreprocessor(tf.keras.layers.Layer):
             all_preds.append(forest(tree_inputs))
 
         return tf.concat(all_preds + [inputs], -1)
+
+    def get_config(self):
+        config = super().get_config()
+        config['trees'] = self._trees
+
+        return config

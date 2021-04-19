@@ -39,6 +39,14 @@ WEIGHT_INITIALIZERS = {
     'point_kernel': 'glorot_uniform'
 }
 
+WEIGHT_KEYS = {
+    'BatchNormalization': ['gamma', 'beta', 'mean', 'variance'],
+    'Conv2D': ['kernel', 'bias'],
+    'Dense': ['weights', 'offset'],
+    'DepthwiseConv2D': ['kernel', 'bias'],
+    'SeparableConv2D': ['depth_kernel', 'point_kernel', 'bias']
+}
+
 INITIALIZERS = {
     'glorot_uniform': tf.initializers.glorot_uniform,
     'glorot_normal': tf.initializers.glorot_normal
@@ -66,6 +74,12 @@ def transpose(amatrix):
 def shape(tensor):
     return np.array(tensor.get_shape().as_list(), dtype=np.float32)
 
+def get_units(params):
+    if isinstance(params['weights'], str):
+        return int(params['number_of_nodes'])
+    else:
+        return len(params['weights'][0])
+
 def activation_function(params):
     afn = params.get('activation_function', None)
 
@@ -89,32 +103,10 @@ def initializer_map(params):
                 random_seed = params.get('seed', 0)
                 assert random_seed is not None
                 imap[k] = INITIALIZERS[weights](seed=random_seed)
-        elif weights is not None:
-            weight_array = np.array(weights, dtype=np.float32)
-            imap[k] = tf.constant_initializer(weight_array)
         else:
             imap[k] = 'zeros'
 
     return imap
-
-def make_sequence(layers_params, creation_functions):
-    layers = []
-
-    if layers_params:
-        for params in layers_params:
-            layer_fn = creation_functions[params['type']]
-            layers.append(layer_fn(params))
-
-    return layers
-
-def propagate(layers, inputs):
-    next_inputs = inputs
-
-    if len(layers) > 0:
-        for layer in layers:
-            next_inputs = layer(next_inputs)
-
-    return next_inputs
 
 def build_graph(layers_params, creation_functions, initial_inputs):
     outputs = []
@@ -131,6 +123,28 @@ def build_graph(layers_params, creation_functions, initial_inputs):
                 next_inputs = layer(outputs[input_idxs[0]])
             else:
                 next_inputs = layer([outputs[idx] for idx in input_idxs])
+
+            type_name = type(layer).__name__
+
+            if type_name in WEIGHT_KEYS:
+                weights = []
+
+                for i, key in enumerate(WEIGHT_KEYS[type_name]):
+                    if params.get(key, None) is None:
+                        if type_name == 'Dense' and key == 'offset':
+                            pval = np.zeros(layer.get_weights()[i].shape)
+                        else:
+                            pval = None
+                    elif not isinstance(params[key], str):
+                        pval = np.array(params[key])
+                    else:
+                        pval = None
+
+                    if pval is not None:
+                        weights.append(pval)
+
+                if weights:
+                    layer.set_weights(weights)
 
             outputs.append(next_inputs)
             layers.append(layer)

@@ -6,14 +6,17 @@ import json
 import gzip
 
 from sensenet.constants import CATEGORICAL, IMAGE_PATH, BOUNDING_BOX
+from sensenet.constants import NUMERIC_INPUTS
 
 from sensenet.accessors import get_image_shape
 from sensenet.load import load_points
 from sensenet.models.image import pretrained_image_model, image_feature_extractor
-from sensenet.models.image import image_layers, get_pretrained_network
+from sensenet.models.image import get_image_layers
+from sensenet.pretrained import get_extractor_bundle
 from sensenet.models.settings import Settings, ensure_settings
 from sensenet.models.wrappers import create_model
 from sensenet.preprocess.image import make_image_reader
+from sensenet.pretrained import get_pretrained_network, get_extractor_bundle
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 
@@ -23,6 +26,8 @@ EXTRA_PARAMS = {
     'input_image_format': 'file',
     'load_pretrained_weights': True
 }
+
+CLASSIFIER_TEST_IMAGES = [('dog.jpg', 254), ('bus.jpg', 779)]
 
 def create_image_model(network_name, additional_settings):
     extras = dict(EXTRA_PARAMS)
@@ -39,7 +44,7 @@ def reader_for_network(network_name, additional_settings):
         extras.update(additional_settings)
 
     image_shape = get_image_shape(get_pretrained_network(network_name))
-    return make_image_reader(Settings(extras), image_shape, False)
+    return make_image_reader(Settings(extras), image_shape)
 
 def check_image_prediction(prediction, index, pos_threshold, neg_threshold):
     for i, p in enumerate(prediction.flatten().tolist()):
@@ -60,24 +65,32 @@ def classify(network_name, accuracy_threshold):
     pixel_model = create_image_model(network_name, pixel_input)
     read = reader_for_network(network_name, None)
 
-    assert len(image_layers(pixel_model)) == nlayers
+    assert len(get_image_layers(pixel_model)) == nlayers
 
-    # Just check if this is possible
-    image_feature_extractor(pixel_model)
-    ex_mod = image_feature_extractor(image_model)
-
-    for image, cidx in [('dog.jpg', 254), ('bus.jpg', 779)]:
+    for image, cidx in CLASSIFIER_TEST_IMAGES:
         point = load_points(preprocessors, [[image]])
         file_pred = image_model.predict(point)
 
-        img_px = np.expand_dims(read(image).numpy(), axis=0)
+        img_px = np.expand_dims(read(image)[0].numpy(), axis=0)
         pixel_pred = pixel_model.predict(img_px)
 
-        for pred in [file_pred, pixel_pred]:
+        for pred in [pixel_pred, file_pred]:
             check_image_prediction(pred, cidx, accuracy_threshold, 0.02)
 
-    outputs = ex_mod(load_points(preprocessors, [['dog.jpg'], ['bus.jpg']]))
-    assert outputs.shape == (2, noutputs)
+    ex_mod = image_feature_extractor(image_model)
+    bundle_mod = create_model(get_extractor_bundle(network_name))
+
+    images = CLASSIFIER_TEST_IMAGES
+    bundle_in = np.array([read(img[0])[0].numpy() for img in images])
+    ex_in = load_points(preprocessors, [[img[0]] for img in images])
+    ex_in.pop(NUMERIC_INPUTS)
+
+    bundle_outputs = bundle_mod(bundle_in)
+    ex_outputs = ex_mod(ex_in)
+
+    assert ex_outputs.shape == (2, noutputs)
+    assert bundle_outputs.shape == (2, noutputs)
+    assert np.sum(ex_outputs - bundle_outputs) == 0
 
 def test_resnet50():
     classify('resnet50', 0.99)
@@ -107,7 +120,7 @@ def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
     read = reader_for_network(network_name, {'rescale_type': 'pad'})
 
     file_pred = image_detector.predict([['pizza_people.jpg']])
-    img_px = np.expand_dims(read('pizza_people.jpg').numpy(), axis=0)
+    img_px = np.expand_dims(read('pizza_people.jpg')[0].numpy(), axis=0)
     pixel_pred = pixel_detector.predict(img_px)
 
     for pred in [file_pred, pixel_pred]:
@@ -118,6 +131,9 @@ def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
 
 def test_tinyyolov4():
     detect_bounding_boxes('tinyyolov4', 5, [0, 53], 0.4)
+
+def test_yolov4():
+    detect_bounding_boxes('yolov4', 8, [0, 41, 53, 60], 0.5)
 
 def test_empty():
     detector = create_image_model('tinyyolov4', None)
@@ -138,18 +154,3 @@ def test_scaling():
 
     assert scores[0] > 0.9
     assert classes[0] == 2
-
-def test_full_model_read():
-    afile = 'mobilenetv2.json'
-    classifier = create_model(afile, EXTRA_PARAMS)
-    # preds = classifier([['dog.jpg']])
-    # print(preds[0,250:260])
-
-    print()
-    for layer in classifier._model.get_config()['layers']:
-        print(layer['name'], layer['inbound_nodes'])
-
-    # afile = 'tinyyolov4.json'
-    # detector = create_model(afile, EXTRA_PARAMS)
-    # boxes, scores, classes  = detector.predict([['strange_car.png']])
-    # print(boxes, scores, classes)

@@ -8,13 +8,7 @@ tf = sensenet.importers.import_tensorflow()
 kl = sensenet.importers.import_keras_layers()
 
 from sensenet.layers.dropblock import DropBlock2D
-from sensenet.layers.utils import initializer_map, activation_function
-
-def get_units(params):
-    if isinstance(params['weights'], str):
-        return int(params['number_of_nodes'])
-    else:
-        return len(params['weights'][0])
+from sensenet.layers.utils import initializer_map, activation_function, get_units
 
 def dense(params):
     imap = initializer_map(params)

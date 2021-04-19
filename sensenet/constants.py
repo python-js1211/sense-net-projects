@@ -37,8 +37,16 @@ WARP = 'warp'
 PAD = 'pad'
 CROP = 'crop'
 
+# Names of network inputs
+STRING_INPUTS = 'string_inputs'
+NUMERIC_INPUTS = 'numeric_inputs'
+PIXEL_INPUTS = 'image_pixel_input'
+
 # Default parameters for YOLO bounding box detection
 MAX_OBJECTS = 32
 SCORE_THRESHOLD = 0.5
 IGNORE_THRESHOLD = 0.5
 IOU_THRESHOLD = 0.5
+
+# Method used for the discrete cosine transform when decompressing JPEGs
+DCT ='INTEGER_ACCURATE'

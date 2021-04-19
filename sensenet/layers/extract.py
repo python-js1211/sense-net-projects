@@ -180,3 +180,12 @@ def name_index(layers, name):
             return i
 
     raise ValueError('%s not found in layer stack' % name)
+
+def input_stack_indices(layer_map, layer_name):
+    layer_indices = [layer_map[layer_name]['index']]
+
+    if layer_map[layer_name]['inbound_nodes']:
+        for in_layer in layer_map[layer_name]['inbound_nodes'][0]:
+            layer_indices.extend(input_stack_indices(layer_map, in_layer[0]))
+
+    return sorted(set(layer_indices))

@@ -2,6 +2,7 @@ import sensenet.importers
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE_PATH
+from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS
 
 from sensenet.preprocess.categorical import CategoricalPreprocessor
 from sensenet.preprocess.numeric import NumericPreprocessor
@@ -37,8 +38,8 @@ class Preprocessor():
         processed = []
 
         try:
-            string_inputs = inputs['string']
-            numeric_inputs = inputs['numeric']
+            string_inputs = inputs[STRING_INPUTS]
+            numeric_inputs = inputs[NUMERIC_INPUTS]
         except TypeError:
             string_inputs = None
             numeric_inputs = inputs
