@@ -63,7 +63,6 @@ def test_channel_order():
 
 def test_cropping():
     for rt, threshold in [('warp', 0.98), ('pad', 0.96), ('crop', 0.98)]:
-        print(rt, threshold)
         settings = {'rescale_type': rt}
         pred = check_pixels_and_file(settings, threshold, 0.02)
         pred_value = pred[0, BUS_INDEX]
