@@ -7,7 +7,7 @@ import shutil
 
 from PIL import Image
 
-from sensenet.models.wrappers import to_tflite, to_tfjs
+from sensenet.models.wrappers import convert, Deepnet, ObjectDetector
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 from .test_pretrained import create_image_model
@@ -15,11 +15,25 @@ from .test_pretrained import create_image_model
 TEST_SAVE_MODEL = os.path.join(TEST_DATA_DIR, 'test_model_save')
 TEST_TF_LITE_MODEL = os.path.join(TEST_SAVE_MODEL, 'model.tflite')
 
+def make_classifier(network_name):
+    pixel_input = {'input_image_format': 'pixel_values'}
+    model = create_image_model(network_name, pixel_input)
+    return Deepnet(model, pixel_input)
+
+def make_detector(network_name, unfiltered):
+    pixel_input = {
+        'input_image_format': 'pixel_values',
+        'output_unfiltered_boxes': unfiltered
+    }
+
+    model = create_image_model(network_name, pixel_input)
+    return ObjectDetector(model, pixel_input)
+
 def tflite_predict(model, len_inputs, len_outputs, test_file):
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
     os.makedirs(TEST_SAVE_MODEL)
 
-    to_tflite(model, TEST_TF_LITE_MODEL)
+    convert(model, None, TEST_TF_LITE_MODEL, 'tflite')
     img = Image.open(os.path.join(TEST_IMAGE_DATA, test_file))
     in_shape = [1] + list(img.size)[::-1] + [3]
 
@@ -38,12 +52,13 @@ def tflite_predict(model, len_inputs, len_outputs, test_file):
     interpreter.set_tensor(input_details[0]['index'], input_data)
     interpreter.invoke()
 
+    # Here the names of the output tensors seem like the come in a
+    # rather random ordering; they do not appear guaranteed to match
+    # the ordering given in the keras model spec.
     return [interpreter.get_tensor(od['index']) for od in output_details]
 
-def test_tf_lite_deepnet():
-    pixel_input = {'input_image_format': 'pixel_values'}
-    model = create_image_model('mobilenetv2', pixel_input)
-    probs = tflite_predict(model, 1, 1, 'dog.jpg')
+def test_tflite_deepnet():
+    probs = tflite_predict(make_classifier('mobilenetv2'), 1, 1, 'dog.jpg')
 
     assert len(probs) == 1
     assert probs[0].shape == (1, 1000), probs[0].shape
@@ -53,14 +68,9 @@ def test_tf_lite_deepnet():
 
     shutil.rmtree(TEST_SAVE_MODEL)
 
-def test_tf_lite_boxes():
-    pixel_input = {
-        'input_image_format': 'pixel_values',
-        'output_unfiltered_boxes': True
-    }
-
-    detector = create_image_model('tinyyolov4', pixel_input)
-    boxes, scores, classes = tflite_predict(detector, 1, 3, 'strange_car.png')
+def test_tflite_boxes():
+    detector = make_detector('tinyyolov4', True)
+    boxes, classes, scores = tflite_predict(detector, 1, 3, 'strange_car.png')
 
     assert boxes.shape == (1, 2535, 4), boxes.shape
     assert classes.shape == (1, 2535), classes.shape
@@ -70,22 +80,18 @@ def test_tf_lite_boxes():
         # There are a few boxes here, but they should all find the
         # same thing in roughly the same place
         if score > 0.5:
-            assert 550 < box[0] < 600, box
-            assert 220 < box[1] < 270, box
-            assert 970 < box[2] < 1020, box
-            assert 390 < box[3] < 440, box
+            assert 550 < box[0] < 600, (box, cls, score)
+            assert 220 < box[1] < 270, (box, cls, score)
+            assert 970 < box[2] < 1020, (box, cls, score)
+            assert 390 < box[3] < 440, (box, cls, score)
 
             assert cls == 2
 
     shutil.rmtree(TEST_SAVE_MODEL)
 
-def test_tf_js_classifier():
+def test_tfjs_classifier():
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
-
-    pixel_input = {'input_image_format': 'pixel_values'}
-    model = create_image_model('mobilenetv2', pixel_input)
-
-    to_tfjs(model, TEST_SAVE_MODEL)
+    convert(make_classifier('mobilenetv2'), None, TEST_SAVE_MODEL, 'tfjs')
 
     # Commenting this delete out will allow you to test the exported
     # model with nodejs/tensorflowjs/canvas, if you have these things
@@ -93,13 +99,11 @@ def test_tf_js_classifier():
     # navigating to sensenet/tests and running `node test_model.js`.
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
 
-def test_tf_js_boxes():
+def test_tfjs_boxes():
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
 
-    pixel_input = {'input_image_format': 'pixel_values'}
-    model = create_image_model('tinyyolov4', pixel_input)
-
-    to_tfjs(model, TEST_SAVE_MODEL)
+    detector = make_detector('tinyyolov4', False)
+    convert(detector, None, TEST_SAVE_MODEL, 'tfjs')
 
     # As above, you can comment this out to test in JS, but here you
     # must also set the `bounding_boxes` variable to true in the test

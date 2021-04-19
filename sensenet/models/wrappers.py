@@ -128,6 +128,8 @@ class ObjectDetector(SaveableModel):
             self._model = box_detector(model, settings)
             self._classes = model['output_exposition']['values']
             self._unfiltered = settings.output_unfiltered_boxes
+        elif 'output_unfiltered_boxes' in settings:
+            self._unfiltered = settings['output_unfiltered_boxes']
 
     def __call__(self, input_data):
         # Single wrapped instance, or multiple instances
@@ -273,7 +275,7 @@ def convert(model, settings, output_path, to_format):
             # doesn't know how to read files (as of TF 2.3)
             model_settings.input_image_format = 'pixel_values'
 
-        model_object = create_model(model_or_spec, settings=model_settings)
+        model_object = create_model(model, settings=model_settings)
 
     if to_format == 'tflite':
         model_object.save_tflite(output_path)
