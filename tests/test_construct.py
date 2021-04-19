@@ -3,12 +3,11 @@ np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 kl = sensenet.importers.import_keras_layers()
 
-from sensenet.layers.block import BlockLayer
-from sensenet.layers.construct import layer_sequence
+from sensenet.layers.block import BlockMaker
+from sensenet.layers.utils import build_graph
+from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.models.settings import Settings
 from sensenet.preprocess.image import make_image_reader
-
-from .utils import make_model
 
 def test_create_simple():
     network = {
@@ -32,12 +31,12 @@ def test_create_simple():
         ]
     }
 
-    lseq = layer_sequence(network)
-    model = make_model(lseq, 4)
+    inputs = kl.Input((4,), dtype=tf.float32)
+    graph = build_graph(network['layers'], LAYER_FUNCTIONS, inputs)
 
-    assert len(lseq) == 2
+    assert len(graph) == 2
 
-    for sizes, layer in zip([(4, 8), (8, 16)], lseq):
+    for sizes, layer in zip([(4, 8), (8, 16)], graph):
         fan_in, fan_out = sizes
         weights = layer.get_weights()
 
@@ -120,24 +119,12 @@ def test_create_residual():
         ]
     }
 
-    lseq = layer_sequence(network)
-    model = make_model(lseq, 4)
+    inputs = kl.Input((8,), dtype=tf.float32)
+    graph = build_graph(network['layers'], LAYER_FUNCTIONS, inputs)
 
-    assert len(lseq) == 3
-
-    assert [kl.Dense, BlockLayer, kl.Dense] == [type(layer) for layer in lseq]
-
-    dense_path_types =[kl.Dense, kl.BatchNormalization, kl.Activation] * 2
-    block_paths = lseq[1]._paths[0]
-
-    assert dense_path_types == [type(layer) for layer in block_paths]
-
-    for layer in [block_paths[0], block_paths[3]]:
-        assert type(layer) == kl.Dense
-
-        weights, offset = layer.get_weights()
-        assert weights.shape == (6, 6)
-        assert offset.shape == (6,)
+    assert len(graph) == 3
+    assert [kl.Dense, BlockMaker, kl.Dense] == [type(layer) for layer in graph]
+    assert graph[-1].output.shape[1] == 4, graph[-1].output.shape
 
 def show_outputs(images, reader, model):
     import matplotlib.pyplot as plt
@@ -146,7 +133,7 @@ def show_outputs(images, reader, model):
 
     for n, image in enumerate(images[:16]):
         ax = plt.subplot(4, 4, n + 1)
-        img = np.expand_dims(reader(image), axis=0)
+        img = np.expand_dims(reader(image)[0], axis=0)
         img_pred = np.minimum(255, model(img, training=True)[0].numpy())
 
         plt.imshow(np.minimum(255, img_pred.astype(np.uint8)))
@@ -163,14 +150,16 @@ def test_dropblock():
                     'rate': 0.1}]
     }
 
+    inputs = kl.Input(image_shape[1:], dtype=tf.float32)
+    graph = build_graph(network['layers'], LAYER_FUNCTIONS, inputs)
+    model = tf.keras.Model(inputs=inputs, outputs=graph[-1].output)
+
     settings = Settings({'image_path_prefix': 'tests/data/images'})
-    reader = make_image_reader(settings, image_shape, False)
-    lseq = layer_sequence(network)
-    model = make_model(lseq, image_shape[1:])
+    reader = make_image_reader(settings, image_shape)
     pizzas = ['pizza_people.jpg'] * 16
 
     # show_outputs(pizzas, reader, model)
 
     for image in pizzas:
-        img = np.expand_dims(reader(image), axis=0)
+        img = np.expand_dims(reader(image)[0].numpy(), axis=0)
         model(img, training=True)
