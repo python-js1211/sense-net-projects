@@ -12,12 +12,13 @@ from sensenet.accessors import get_image_shape
 from sensenet.load import load_points
 from sensenet.models.image import pretrained_image_model, image_feature_extractor
 from sensenet.models.image import get_image_layers
-from sensenet.pretrained import get_extractor_bundle
 from sensenet.models.settings import Settings, ensure_settings
 from sensenet.models.wrappers import create_model
+from sensenet.preprocess.image import make_image_reader
+from sensenet.pretrained import get_extractor_bundle
 from sensenet.pretrained import get_pretrained_network, get_extractor_bundle
 
-from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA, make_image_reader
+from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 
 EXTRA_PARAMS = {
     'bounding_box_threshold': 0.5,

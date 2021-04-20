@@ -7,8 +7,7 @@ from sensenet.layers.block import BlockMaker
 from sensenet.layers.utils import build_graph
 from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.models.settings import Settings
-
-from .utils import make_image_reader
+from sensenet.preprocess.image import make_image_reader
 
 def test_create_simple():
     network = {

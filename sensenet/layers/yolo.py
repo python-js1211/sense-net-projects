@@ -5,7 +5,7 @@ from sensenet.accessors import get_image_shape
 from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.layers.utils import build_graph
 
-def yolo_decode(self, features, decoding_info, input_size, nclasses):
+def yolo_decode(features, decoding_info, input_size, nclasses):
     strides, anchors, xyscale = decoding_info
     fsize = tf.shape(features)[0]
     osize = tf.constant(input_size // int(strides))
@@ -32,7 +32,7 @@ def yolo_decode(self, features, decoding_info, input_size, nclasses):
 
     return conv_output, tf.concat([pred_xywh, pred_conf, pred_prob], axis=-1)
 
-class Yolo(YoloBranches):
+class Yolo():
     def __init__(self, network, nclasses):
         self._nclasses = nclasses
         self._input_size = get_image_shape(network)[1]
