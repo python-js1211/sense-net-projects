@@ -112,31 +112,6 @@ def rescale(settings, target_shape, image):
     else:
         return new_image
 
-def make_image_reader(settings, target_shape):
-    n_chan = target_shape[-1]
-    input_format = settings.input_image_format or 'file'
-    prefix = settings.image_path_prefix or '.'
-
-    def read_image(path_or_bytes):
-        if input_format == 'pixel_values':
-            raw = path_or_bytes
-        else:
-            if input_format == 'image_bytes':
-                img_bytes = path_or_bytes
-            else:
-                path = tf.strings.join([prefix + os.sep, path_or_bytes])
-                img_bytes = tf.io.read_file(path)
-
-            # Note that, spectacularly weirdly, this method will also
-            # work for pngs and gifs.  Even wierder, We can't use
-            # `decode_image` here because the tensor that comes out
-            # doesn't have a shape!
-            raw = tf.io.decode_jpeg(img_bytes, dct_method=DCT, channels=n_chan)
-
-        return rescale(settings, target_shape, raw), tf.shape(raw)
-
-    return read_image
-
 class ImageReaderLayer(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
         layer_args = dict(kwargs)
@@ -169,11 +144,13 @@ class ImageFileReaderLayer(ImageReaderLayer):
 
     def read(self, path):
         path = tf.strings.join([self._prefix + os.sep, path])
-        img_bytes = tf.io.read_file(path)
+        img = tf.io.read_file(path)
 
-        raw = tf.io.decode_jpeg(img_bytes,
-                                dct_method='INTEGER_ACCURATE',
-                                channels=self._nchannels)
+        # Note that, spectacularly weirdly, this method will also
+        # work for pngs and gifs.  Even wierder, We can't use
+        # `decode_image` here because the tensor that comes out
+        # doesn't have a shape!
+        raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
 
         return rescale(self._settings, self._input_shape, raw)
 
@@ -181,34 +158,49 @@ class ImageBytesReaderLayer(ImageReaderLayer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def read(self, img_bytes):
-        raw = tf.io.decode_jpeg(img_bytes,
-                                dct_method='INTEGER_ACCURATE',
-                                channels=self._nchannels)
-
+    def read(self, img):
+        raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
         return rescale(self._settings, self._input_shape, raw)
+
+class ImageShapeReaderLayer(ImageReaderLayer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def read(self, path):
+        path = tf.strings.join([self._prefix + os.sep, path])
+        img = tf.io.read_file(path)
+        raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
+
+        return rescale(self._settings, self._input_shape, raw), tf.shape(raw)
+
+    def call(self, inputs):
+        return self.read(inputs)
 
 class ImageReader():
     def __init__(self, network, settings):
         self._settings = settings
         self._input_shape = get_image_shape(network)
 
+    def reader(self, get_shape=False):
+        config = {
+            'settings': dict(vars(self._settings)),
+            'input_shape': list(self._input_shape)
+        }
+
+        if self._settings.input_image_format == 'image_bytes':
+            return ImageBytesReaderLayer(**config)
+        elif get_shape:
+            return ImageShapeReaderLayer(**config)
+        else:
+            return ImageFileReaderLayer(**config)
+
     def __call__(self, inputs):
         if self._settings.input_image_format == 'pixel_values':
             dims = tf.constant(self._input_shape[1:3], tf.int32)
             images = rescale(self._settings, self._input_shape, inputs)
         else:
-            config = {
-                'settings': dict(vars(self._settings)),
-                'input_shape': list(self._input_shape)
-            }
-
-            if self._settings.input_image_format == 'image_bytes':
-                read = ImageBytesReaderLayer(**config)
-            else:
-                read = ImageFileReaderLayer(**config)
-
-            images = read(inputs)
+            read_layer = self.reader()
+            images = read_layer(inputs)
 
         return tf.cast(images, tf.float32)
 
@@ -217,20 +209,21 @@ class BoundingBoxImageReader(ImageReader):
         super(BoundingBoxImageReader, self).__init__(network, settings)
 
     def __call__(self, inputs):
-
         if self._settings.input_image_format == 'pixel_values':
             dims = tf.constant(self._input_shape[1:3], tf.int32)
             image = rescale(self._settings, self._input_shape, inputs)
             original_dims = tf.expand_dims(tf.shape(inputs)[1:], axis=0)
         else:
+            read = self.reader(True)
+
             # We're explicitly saying here we only take one filename at
             # a time; if multiple files are passed in, all but the first
             # one are ignored.
-            read = make_image_reader(self._settings, self._input_shape)
-            image, dims = read(inputs[0, 0])
+            image, original_dims = read(inputs[0, 0])
             image = tf.reshape(image, self._input_shape[1:])
+
             image = tf.expand_dims(image, axis=0)
-            original_dims = tf.expand_dims(dims, axis=0)
+            original_dims = tf.expand_dims(original_dims, axis=0)
 
         return tf.cast(image, tf.float32), original_dims
 

@@ -185,7 +185,11 @@ def input_stack_indices(layer_map, layer_name):
     layer_indices = [layer_map[layer_name]['index']]
 
     if layer_map[layer_name]['inbound_nodes']:
-        for in_layer in layer_map[layer_name]['inbound_nodes'][0]:
+        if isinstance(layer_map[layer_name]['inbound_nodes'][0][0], list):
+            for in_layer in layer_map[layer_name]['inbound_nodes'][0]:
+                layer_indices.extend(input_stack_indices(layer_map, in_layer[0]))
+        else:
+            in_layer = layer_map[layer_name]['inbound_nodes'][0]
             layer_indices.extend(input_stack_indices(layer_map, in_layer[0]))
 
     return sorted(set(layer_indices))

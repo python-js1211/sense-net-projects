@@ -15,10 +15,9 @@ from sensenet.models.image import get_image_layers
 from sensenet.pretrained import get_extractor_bundle
 from sensenet.models.settings import Settings, ensure_settings
 from sensenet.models.wrappers import create_model
-from sensenet.preprocess.image import make_image_reader
 from sensenet.pretrained import get_pretrained_network, get_extractor_bundle
 
-from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
+from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA, make_image_reader
 
 EXTRA_PARAMS = {
     'bounding_box_threshold': 0.5,
@@ -71,7 +70,7 @@ def classify(network_name, accuracy_threshold):
         point = load_points(preprocessors, [[image]])
         file_pred = image_model.predict(point)
 
-        img_px = np.expand_dims(read(image)[0].numpy(), axis=0)
+        img_px = np.expand_dims(read(image).numpy(), axis=0)
         pixel_pred = pixel_model.predict(img_px)
 
         for pred in [pixel_pred, file_pred]:
@@ -81,7 +80,7 @@ def classify(network_name, accuracy_threshold):
     bundle_mod = create_model(get_extractor_bundle(network_name))
 
     images = CLASSIFIER_TEST_IMAGES
-    bundle_in = np.array([read(img[0])[0].numpy() for img in images])
+    bundle_in = np.array([read(img[0]).numpy() for img in images])
     ex_in = load_points(preprocessors, [[img[0]] for img in images])
     ex_in.pop(NUMERIC_INPUTS)
 
@@ -90,7 +89,7 @@ def classify(network_name, accuracy_threshold):
 
     assert ex_outputs.shape == (2, noutputs)
     assert bundle_outputs.shape == (2, noutputs)
-    assert np.sum(ex_outputs - bundle_outputs) == 0
+    assert np.mean(np.abs(ex_outputs - bundle_outputs)) < 1e-5
 
 def test_resnet50():
     classify('resnet50', 0.99)
@@ -120,7 +119,7 @@ def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
     read = reader_for_network(network_name, {'rescale_type': 'pad'})
 
     file_pred = image_detector.predict([['pizza_people.jpg']])
-    img_px = np.expand_dims(read('pizza_people.jpg')[0].numpy(), axis=0)
+    img_px = np.expand_dims(read('pizza_people.jpg').numpy(), axis=0)
     pixel_pred = pixel_detector.predict(img_px)
 
     for pred in [file_pred, pixel_pred]:

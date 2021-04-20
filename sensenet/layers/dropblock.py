@@ -35,7 +35,7 @@ class DropBlock2D(tf.keras.layers.Layer):
 
         super(DropBlock2D, self).build(input_shape)
 
-    def call(self, inputs, training=None, **kwargs):
+    def call(self, inputs, training=False, **kwargs):
         def drop():
             mask = self.create_mask(tf.shape(inputs))
             mask_size = tf.cast(tf.size(mask), dtype=tf.float32)

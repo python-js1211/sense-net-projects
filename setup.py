@@ -40,15 +40,16 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=find_packages(),
+    package_data={'sensenet': ["sensenet_metadata.json.gz"]},
     ext_modules=[tree_module],
     tests_require=[
         'nose>=1.3,<1.4',
-        'pillow>=7.2,<7.3',
-        'scikit-learn>=0.23,<0.24'
+        'pillow>=8.2,<8.3',
+        'scikit-learn>=0.24,<0.25'
     ],
     test_suite='nose.collector',
     install_requires=[
-        'numpy>=1.18,<1.19',
-        'tensorflow>=2.3,<2.4',
-        'tensorflowjs>=2.7,<2.8'
+        'numpy>=1.19,<1.20',
+        'tensorflow>=2.4,<2.5',
+        'tensorflowjs>=3.4,<3.5'
     ])

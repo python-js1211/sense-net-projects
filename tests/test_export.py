@@ -52,9 +52,6 @@ def tflite_predict(model, len_inputs, len_outputs, test_file):
     interpreter.set_tensor(input_details[0]['index'], input_data)
     interpreter.invoke()
 
-    # Here the names of the output tensors seem like the come in a
-    # rather random ordering; they do not appear guaranteed to match
-    # the ordering given in the keras model spec.
     return [interpreter.get_tensor(od['index']) for od in output_details]
 
 def test_tflite_deepnet():
@@ -70,7 +67,7 @@ def test_tflite_deepnet():
 
 def test_tflite_boxes():
     detector = make_detector('tinyyolov4', True)
-    boxes, classes, scores = tflite_predict(detector, 1, 3, 'strange_car.png')
+    boxes, scores, classes = tflite_predict(detector, 1, 3, 'strange_car.png')
 
     assert boxes.shape == (1, 2535, 4), boxes.shape
     assert classes.shape == (1, 2535), classes.shape

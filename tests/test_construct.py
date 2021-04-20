@@ -7,7 +7,8 @@ from sensenet.layers.block import BlockMaker
 from sensenet.layers.utils import build_graph
 from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.models.settings import Settings
-from sensenet.preprocess.image import make_image_reader
+
+from .utils import make_image_reader
 
 def test_create_simple():
     network = {
@@ -161,5 +162,5 @@ def test_dropblock():
     # show_outputs(pizzas, reader, model)
 
     for image in pizzas:
-        img = np.expand_dims(reader(image)[0].numpy(), axis=0)
+        img = np.expand_dims(reader(image).numpy(), axis=0)
         model(img, training=True)
