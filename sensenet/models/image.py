@@ -12,7 +12,7 @@ from sensenet.preprocess.preprocessor import Preprocessor
 from sensenet.pretrained import load_pretrained_weights, get_pretrained_network
 
 START_TYPES = ['ZeroPadding2D', 'Conv2D']
-END_TYPES = ['GlobalAveragePooling2D', 'Conv2D']
+END_TYPES = ['GlobalAveragePooling2D', 'GlobalMaxPooling2D', 'Conv2D']
 
 YOLO_N_CONV = 110
 TINYYOLO_N_CONV = 21
