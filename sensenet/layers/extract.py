@@ -146,21 +146,6 @@ LAYER_EXTRACTORS = {
     'ZeroPadding2D': zero_pad
 }
 
-def extract_one(model, config):
-    layer = model.get_layer(config['name'])
-
-    try:
-        processor = LAYER_EXTRACTORS[config['class_name']]
-    except KeyError:
-        pprint.pprint(config)
-        raise ValueError('No processor for type %s' % config['name'])
-
-    new_layer = processor(config['config'], layer)
-    new_layer['name'] = config['name']
-    new_layer['input_names'] = [n[0] for n in config['inbound_nodes'][0]]
-
-    return new_layer
-
 def index_in_model(model, ltype, nth):
     layers = model.get_config()['layers']
     matching = []
@@ -174,6 +159,24 @@ def index_in_model(model, ltype, nth):
     else:
         return matching[nth]
 
+def input_indices(layer_map, layer_name, index_set):
+    index_set.add(layer_map[layer_name]['index'])
+
+    if layer_map[layer_name]['inbound_nodes']:
+        if isinstance(layer_map[layer_name]['inbound_nodes'][0][0], list):
+            for in_layer in layer_map[layer_name]['inbound_nodes'][0]:
+                in_name = in_layer[0]
+
+                if layer_map[in_name]['index'] not in index_set:
+                    input_indices(layer_map, in_name, index_set)
+        else:
+            in_name = layer_map[layer_name]['inbound_nodes'][0][0]
+
+            if layer_map[in_name]['index'] not in index_set:
+                input_indices(layer_map, in_name, index_set)
+
+    return index_set
+
 def name_index(layers, name):
     for i, layer in enumerate(layers):
         if layer['name'] == name:
@@ -181,15 +184,44 @@ def name_index(layers, name):
 
     raise ValueError('%s not found in layer stack' % name)
 
-def input_stack_indices(layer_map, layer_name):
-    layer_indices = [layer_map[layer_name]['index']]
+def make_layer_map(model):
+    all_layers = model.get_config()['layers']
+    layer_map = {}
 
-    if layer_map[layer_name]['inbound_nodes']:
-        if isinstance(layer_map[layer_name]['inbound_nodes'][0][0], list):
-            for in_layer in layer_map[layer_name]['inbound_nodes'][0]:
-                layer_indices.extend(input_stack_indices(layer_map, in_layer[0]))
-        else:
-            in_layer = layer_map[layer_name]['inbound_nodes'][0]
-            layer_indices.extend(input_stack_indices(layer_map, in_layer[0]))
+    for i, layer in enumerate(all_layers):
+        layer_map[layer['name']] = layer
+        layer_map[layer['name']]['index'] = i
 
-    return sorted(set(layer_indices))
+    return layer_map
+
+def extract_one(layer_map, layer):
+    config = layer_map[layer.name]
+
+    try:
+        processor = LAYER_EXTRACTORS[config['class_name']]
+    except KeyError:
+        pprint.pprint(config)
+        raise ValueError('No processor for type %s' % ltype)
+
+    new_layer = processor(config['config'], layer)
+    new_layer['name'] = config['name']
+    new_layer['input_names'] = [n[0] for n in config['inbound_nodes'][0]]
+
+    return new_layer
+
+def extract_layers_list(model, keras_layers):
+    layers = []
+    layer_map = make_layer_map(model)
+
+    for layer in keras_layers:
+        new_layer = extract_one(layer_map, layer)
+        layers.append(new_layer)
+
+    for layer in layers[1:]:
+        layer['inputs'] = [name_index(layers, n) for n in layer['input_names']]
+
+    for layer in layers:
+        layer.pop('input_names')
+        layer.pop('name')
+
+    return layers

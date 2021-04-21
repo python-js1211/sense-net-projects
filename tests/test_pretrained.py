@@ -9,6 +9,7 @@ from sensenet.constants import CATEGORICAL, IMAGE_PATH, BOUNDING_BOX
 from sensenet.constants import NUMERIC_INPUTS
 
 from sensenet.accessors import get_image_shape
+from sensenet.layers.extract import extract_layers_list
 from sensenet.load import load_points
 from sensenet.models.image import pretrained_image_model, image_feature_extractor
 from sensenet.models.image import get_image_layers
@@ -115,9 +116,17 @@ def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
         'bounding_box_threshold': threshold
     }
 
+    network = get_pretrained_network(network_name)
+    nlayers = len(network['image_network']['layers'])
+
     image_detector = create_image_model(network_name, file_input)
     pixel_detector = create_image_model(network_name, pixel_input)
     read = reader_for_network(network_name, {'rescale_type': 'pad'})
+
+    image_layers = get_image_layers(pixel_detector)
+    ex_layers = extract_layers_list(pixel_detector, image_layers)
+
+    assert len(image_layers) == len(ex_layers) == nlayers
 
     file_pred = image_detector.predict([['pizza_people.jpg']])
     img_px = np.expand_dims(read('pizza_people.jpg').numpy(), axis=0)

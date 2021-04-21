@@ -4,7 +4,7 @@ tf = sensenet.importers.import_tensorflow()
 import math
 
 from sensenet.accessors import get_layer, is_yolo_model
-from sensenet.layers.extract import name_index, input_stack_indices
+from sensenet.layers.extract import name_index, input_indices, make_layer_map
 from sensenet.models.bounding_box import box_detector
 from sensenet.models.deepnet import deepnet_model
 from sensenet.models.settings import ensure_settings
@@ -13,6 +13,9 @@ from sensenet.pretrained import load_pretrained_weights, get_pretrained_network
 
 START_TYPES = ['ZeroPadding2D', 'Conv2D']
 END_TYPES = ['GlobalAveragePooling2D', 'Conv2D']
+
+YOLO_N_CONV = 110
+TINYYOLO_N_CONV = 21
 
 def image_model(network, input_settings):
     settings = ensure_settings(input_settings)
@@ -57,23 +60,30 @@ def get_image_layer_boundary(model, first):
     if not matching:
         raise ValueError('%s not found in model' % ltype)
     else:
-        return matching[nth]['name']
+        if first:
+            return matching[nth]['name']
+        elif len(matching) == YOLO_N_CONV:
+            return [m['name'] for m in matching[-3:]]
+        elif len(matching) == TINYYOLO_N_CONV:
+            return [m['name'] for m in matching[-2:]]
+        else:
+            return [matching[nth]['name']]
 
 def get_image_layers(model, truncate_start=True):
     all_layers = model.get_config()['layers']
-    layer_map = {}
+    layer_map = make_layer_map(model)
+    end_names = get_image_layer_boundary(model, False)
+    all_indices = set()
 
-    for i, layer in enumerate(all_layers):
-        layer_map[layer['name']] = layer
-        layer_map[layer['name']]['index'] = i
+    for end_name in end_names:
+        input_indices(layer_map, end_name, all_indices)
 
-    end_name = get_image_layer_boundary(model, False)
-    indices = input_stack_indices(layer_map, end_name)
+    indices = sorted(all_indices)
 
     if truncate_start:
         begin_name = get_image_layer_boundary(model, True)
         begin_index = name_index(all_layers, begin_name)
-        image_layer_indices = indices[begin_index:]
+        image_layer_indices = indices[indices.index(begin_index):]
     else:
         image_layer_indices = indices
 
