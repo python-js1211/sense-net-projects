@@ -1,7 +1,7 @@
 import sensenet.importers
 tf = sensenet.importers.import_tensorflow()
 
-from sensenet.accessors import get_image_shape
+from sensenet.accessors import get_image_shape, yolo_outputs
 from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.layers.utils import build_graph
 
@@ -40,7 +40,7 @@ class Yolo():
 
         self._branches = []
 
-        for branch in network['metadata']['outputs']:
+        for branch in yolo_outputs(network):
             d_info = [branch[k] for k in ['strides', 'anchors', 'xyscale']]
             self._branches.append((branch['input'], d_info))
 

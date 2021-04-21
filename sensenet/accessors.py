@@ -47,19 +47,21 @@ def number_of_classes(model):
     else:
         raise ValueError('Output exposition is type "%s"' % outex['type'])
 
-def get_layer(model, layer_type, names):
-    for layer in model.layers:
-        if type(layer) == layer_type:
-            if names is None or layer.name in names:
-                return layer
-
-    msg = 'Could not find layer of type %s' % str(layer_type)
-
-    if names is not None:
-        msg += 'with name in %s' % str(names)
-
-    raise ValueError(msg)
-
 def is_yolo_model(network):
     image_net = network.get('image_network', None)
     return image_net and 'yolo' in image_net['metadata']['base_image_network']
+
+def yolo_outputs(network):
+    if 'image_network' in network:
+        outputs = network['image_network']['metadata']['outputs']
+    elif 'metadata' in network:
+        outputs = network['metadata']['outputs']
+    else:
+        raise ValueError('No YOLO outputs in dict: %s' % str(network.keys()))
+
+    try:
+        assert isinstance(outputs, list) and len(outputs) > 1
+    except:
+        raise ValueError('"outputs" has type %s' % str(type(outputs)))
+
+    return outputs

@@ -3,7 +3,7 @@ tf = sensenet.importers.import_tensorflow()
 
 import math
 
-from sensenet.accessors import get_layer, is_yolo_model
+from sensenet.accessors import is_yolo_model
 from sensenet.layers.extract import name_index, input_indices, make_layer_map
 from sensenet.models.bounding_box import box_detector
 from sensenet.models.deepnet import deepnet_model

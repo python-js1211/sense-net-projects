@@ -6,7 +6,7 @@ kl = sensenet.importers.import_keras_layers()
 from sensenet.constants import PAD, MAX_OBJECTS
 from sensenet.constants import SCORE_THRESHOLD, IGNORE_THRESHOLD, IOU_THRESHOLD
 from sensenet.accessors import number_of_classes, get_image_shape
-from sensenet.accessors import get_image_tensor_shape
+from sensenet.accessors import get_image_tensor_shape, yolo_outputs
 from sensenet.layers.yolo import Yolo
 from sensenet.models.settings import ensure_settings
 from sensenet.preprocess.image import BoundingBoxImageReader, ImageLoader
@@ -17,7 +17,7 @@ class BoxLocator():
         self._nclasses = nclasses
         self._input_shape = get_image_shape(network)[1:3]
 
-        ob = network['metadata']['outputs']
+        ob = yolo_outputs(network)
         self._strides = tuple([self._input_shape[0] // b['strides'] for b in ob])
         self._nanchors = tuple([len(b['anchors']) for b in ob])
 
