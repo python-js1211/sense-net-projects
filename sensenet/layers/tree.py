@@ -1,3 +1,13 @@
+"""Features generated via tree embedding.
+
+This module is a wrapper for BigML deepnet "tree embeddings", which
+is essentially a tree-based convolutional layer applied before the
+fully-connected layers in a BigML deepnet. Note that here we define
+both a custom layer and a custom operator, the latter of which relies
+on a tensorflow extension (BigMLTreeify) which is compiled and
+installed when sensenet is installed.
+
+"""
 import collections
 
 import sensenet.importers
