@@ -126,6 +126,12 @@ input and can output the following formats:
   deleted.  To extract the bundle without instantiating the model, see
   the functions in `sensenet.models.bundle`.
 
+- `h5` exports the model **weights only** to the keras h5 model format
+  (i.e., via use of the TensorFlow function
+  `tf.keras.Model.save_weights`) To use these, you'd instantiate the
+  model from JSON and load the weights separately using the
+  corresponding TensorFlow `load_weights` function.
+
 ## Usage
 
 Once instantiated, you can use the model to make predictions by using

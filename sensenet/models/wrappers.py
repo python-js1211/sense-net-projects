@@ -279,7 +279,9 @@ def convert(model, settings, output_path, to_format):
     The third is the path to which to output the converted model.
 
     The fourth is the format to which to convert the model, any of
-    `smbundle`, `tflite` or `tfjs`.
+    `smbundle`, `tflite`, `tfjs`, or `h5`, the latter of which saves
+    only the weights of the model in keras h5 format without saving
+    the layer configs.
 
     On completion, the requested file is written to the provided path.
 
@@ -302,7 +304,7 @@ def convert(model, settings, output_path, to_format):
         model_object.save_tfjs(output_path)
     elif to_format == 'smbundle':
         model_object.save_bundle(output_path)
-    elif to_format == 'weights_only':
+    elif to_format == 'h5':
         model_object.save_weights(output_path)
     else:
         raise ValueError('Format "%s% unknown' % str(to_format))
