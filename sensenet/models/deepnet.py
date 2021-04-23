@@ -16,7 +16,7 @@ def instantiate_inputs(model, settings):
     ptypes = [p['type'] for p in preprocessors]
 
     ncols = len(preprocessors)
-    nstrings = ptypes.count(IMAGE_PATH) + ptypes.count(CATEGORICAL)
+    nstrings = ptypes.count(IMAGE_PATH)
 
     if ncols == 1 and settings.input_image_format == 'pixel_values':
         assert ptypes[0] == IMAGE_PATH

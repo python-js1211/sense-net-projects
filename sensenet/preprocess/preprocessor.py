@@ -45,12 +45,12 @@ class Preprocessor():
             numeric_inputs = inputs
 
         for i, pp in enumerate(self._preprocessors):
-            if isinstance(pp, (ImagePreprocessor, CategoricalPreprocessor)):
+            if isinstance(pp, ImagePreprocessor):
                 if string_inputs is not None:
                     ith_string = tf.reshape(string_inputs[:,str_idx], (-1,))
                     str_idx += 1
                     processed.append(pp(ith_string))
-                elif isinstance(pp, ImagePreprocessor):
+                else:
                     processed.append(pp(numeric_inputs))
             else:
                 ith_numeric = tf.reshape(numeric_inputs[:, i], (-1,))

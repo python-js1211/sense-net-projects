@@ -6,6 +6,9 @@ import json
 import os
 import shutil
 import tempfile
+import sys
+
+from contextlib import contextmanager
 
 from sensenet.accessors import is_yolo_model, get_output_exposition
 from sensenet.load import load_points
@@ -16,6 +19,16 @@ from sensenet.models.settings import ensure_settings
 
 SETTINGS_PATH = os.path.join('assets', 'settings.json')
 
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
 class SaveableModel(object):
     def __init__(self, keras_model, settings):
         if isinstance(keras_model, tf.keras.Model):
@@ -23,6 +36,9 @@ class SaveableModel(object):
 
             for key in settings:
                 setattr(self, key, settings[key])
+
+    def save_weights(self, save_path):
+        self._model.save_weights(save_path)
 
     def save_bundle(self, save_path):
         outdir, model_name = os.path.split(save_path)
@@ -74,7 +90,10 @@ class SaveableModel(object):
 
         with tempfile.TemporaryDirectory() as saved_model_temp:
             self._model.save(saved_model_temp)
-            tfjs.converters.convert_tf_saved_model(saved_model_temp, save_path)
+            with suppress_stdout():
+                tfjs.converters.convert_tf_saved_model(saved_model_temp,
+                                                       save_path,
+                                                       skip_op_check=True)
 
 class Deepnet(SaveableModel):
     def __init__(self, model, settings):
@@ -283,5 +302,7 @@ def convert(model, settings, output_path, to_format):
         model_object.save_tfjs(output_path)
     elif to_format == 'smbundle':
         model_object.save_bundle(output_path)
+    elif to_format == 'weights_only':
+        model_object.save_weights(output_path)
     else:
         raise ValueError('Format "%s% unknown' % str(to_format))

@@ -5,6 +5,12 @@ tf = sensenet.importers.import_tensorflow()
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE_PATH
 from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS
 
+def list_index(alist, element):
+    try:
+        return float(alist.index(element))
+    except ValueError:
+        return -1
+
 def load_points(preprocessors, points):
     rows = len(points)
     cols = len(preprocessors)
@@ -21,7 +27,11 @@ def load_points(preprocessors, points):
         if proc['type'] == NUMERIC:
             for j, p in enumerate(points):
                 inputs[NUMERIC_INPUTS][j, i] = float(p[pidx])
-        elif proc['type'] in [IMAGE_PATH, CATEGORICAL]:
+        elif proc['type'] == CATEGORICAL:
+            cats = proc['values']
+            for j, p in enumerate(points):
+                inputs[NUMERIC_INPUTS][j, i] = list_index(cats, p[pidx])
+        elif proc['type'] == IMAGE_PATH:
             for j, p in enumerate(points):
                 inputs[STRING_INPUTS][j].append(str(p[pidx]))
         else:

@@ -24,8 +24,10 @@ LEGACY = 'legacy_regression.json.gz'
 SEARCH = 'search_regression.json.gz'
 LEGACY_SEARCH = 'legacy_search_regression.json.gz'
 IMAGE = 'image_regression.json.gz'
+
 TEMP_WEIGHTS = os.path.join(TEST_DATA_DIR, 'test_save_weights.h5')
 TEMP_BUNDLE = os.path.join(TEST_DATA_DIR, 'test_save_bundle.smbundle')
+TEMP_TFJS = os.path.join(TEST_DATA_DIR, 'test_save_tfjs')
 
 EXTRA_PARAMS = Settings({'image_path_prefix': TEST_DATA_DIR + 'images/digits/'})
 
@@ -36,8 +38,19 @@ def remove_temp_files():
         except OSError:
             pass
 
-    assert not os.path.exists(TEMP_WEIGHTS)
-    assert not os.path.exists(TEMP_BUNDLE)
+        assert not os.path.exists(afile), afile
+
+    if os.path.exists(TEMP_TFJS):
+        for afile in ['group1-shard1of1.bin', 'model.json']:
+            apath = os.path.join(TEMP_TFJS, afile)
+
+            try:
+                os.remove(apath)
+            except OSError:
+                pass
+
+        os.rmdir(TEMP_TFJS)
+        assert not os.path.exists(apath)
 
 def round_trip(settings, wrapper):
     remove_temp_files()
@@ -48,7 +61,7 @@ def round_trip(settings, wrapper):
     assert len(json.dumps(short)) < max_len
 
     # start = time.time()
-    wrapper._model.save_weights(TEMP_WEIGHTS)
+    wrapper.save_weights(TEMP_WEIGHTS)
     # print('save weights: %.2f' % (time.time() - start))
     # start = time.time()
     new_wrapper = create_model(short, EXTRA_PARAMS)
@@ -65,6 +78,10 @@ def round_trip(settings, wrapper):
     bundle_wrapper = create_model(TEMP_BUNDLE)
     # print('load bundle: %.2f' % (time.time() - start))
     # print(os.path.getsize(TEMP_BUNDLE))
+
+    # start = time.time()
+    new_wrapper.save_tfjs(TEMP_TFJS)
+    # print('save tfjs: %.2f' % (time.time() - start))
 
     remove_temp_files()
 
