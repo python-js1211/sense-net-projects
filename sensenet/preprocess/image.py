@@ -115,7 +115,11 @@ def rescale(settings, target_shape, image):
 def make_image_reader(settings, target_shape):
     n_chan = target_shape[-1]
     input_format = settings.input_image_format or 'file'
-    prefix = settings.image_path_prefix + os.sep or ''
+
+    if settings.image_path_prefix:
+        prefix = settings.image_path_prefix + os.sep
+    else:
+        prefix = ''
 
     def read_image(path_or_bytes):
         if input_format == 'pixel_values':
@@ -202,6 +206,10 @@ class ImageReader():
         self._settings = settings
         self._input_shape = get_image_shape(network)
 
+        if self._settings.rescale_type is None:
+            net_meta = network['metadata']
+            self._settings.rescale_type = net_meta['rescale_type']
+
     def reader(self, get_shape=False):
         config = {
             'settings': dict(vars(self._settings)),
@@ -228,6 +236,7 @@ class ImageReader():
 class BoundingBoxImageReader(ImageReader):
     def __init__(self, network, settings):
         super(BoundingBoxImageReader, self).__init__(network, settings)
+        self._settings.rescale_type = PAD
 
     def __call__(self, inputs):
         if self._settings.input_image_format == 'pixel_values':
