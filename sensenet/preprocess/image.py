@@ -115,7 +115,7 @@ def rescale(settings, target_shape, image):
 def make_image_reader(settings, target_shape):
     n_chan = target_shape[-1]
     input_format = settings.input_image_format or 'file'
-    prefix = settings.image_path_prefix or '.'
+    prefix = settings.image_path_prefix + os.sep or ''
 
     def read_image(path_or_bytes):
         if input_format == 'pixel_values':
@@ -124,7 +124,7 @@ def make_image_reader(settings, target_shape):
             if input_format == 'image_bytes':
                 img_bytes = path_or_bytes
             else:
-                path = tf.strings.join([prefix + os.sep, path_or_bytes])
+                path = tf.strings.join([prefix, path_or_bytes])
                 img_bytes = tf.io.read_file(path)
 
             raw = tf.io.decode_jpeg(img_bytes, dct_method=DCT, channels=n_chan)
