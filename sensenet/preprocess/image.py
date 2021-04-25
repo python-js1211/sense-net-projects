@@ -208,7 +208,7 @@ class ImageReader():
 
         if self._settings.rescale_type is None:
             net_meta = network['metadata']
-            self._settings.rescale_type = net_meta['rescale_type']
+            self._settings.rescale_type = net_meta.get('rescale_type', WARP)
 
     def reader(self, get_shape=False):
         config = {
