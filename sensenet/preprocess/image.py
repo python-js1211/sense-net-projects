@@ -24,7 +24,7 @@ def scale_for_box(input_dims, target_dims, minimum):
         return tf.math.maximum(x_scale, y_scale)
 
 def resize_with_crop_or_pad(settings, target_dims, image):
-    pad_only = tf.constant(settings.rescale_type == PAD)
+    pad_only = settings.rescale_type == PAD
 
     # Assume target_dims are [h, w, channels]
     if len(image.shape) == 3:

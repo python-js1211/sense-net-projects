@@ -2,15 +2,15 @@ import sensenet.importers
 np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 
-import json
-import gzip
+import os
 
 from sensenet.constants import CATEGORICAL, IMAGE_PATH, BOUNDING_BOX
-from sensenet.constants import NUMERIC_INPUTS
+from sensenet.constants import NUMERIC_INPUTS, WARP, CROP
 
 from sensenet.accessors import get_image_shape
 from sensenet.layers.extract import extract_layers_list
 from sensenet.load import load_points
+from sensenet.models.bundle import write_bundle
 from sensenet.models.image import pretrained_image_model, image_feature_extractor
 from sensenet.models.image import get_image_layers
 from sensenet.models.settings import Settings, ensure_settings
@@ -25,10 +25,23 @@ EXTRA_PARAMS = {
     'bounding_box_threshold': 0.5,
     'image_path_prefix': TEST_IMAGE_DATA,
     'input_image_format': 'file',
-    'load_pretrained_weights': True
+    'load_pretrained_weights': True,
+    'rescale_type': CROP
 }
 
 CLASSIFIER_TEST_IMAGES = [('dog.jpg', 254), ('bus.jpg', 779)]
+EXTRACTOR_FORMAT = '%s_extractor_%s'
+
+def write_bundle_file(tf_model, metadata):
+    network = metadata['base_image_network']
+    version = metadata['version']
+    name = EXTRACTOR_FORMAT % (network, version)
+
+    model_path = os.path.join(TEST_DATA_DIR, name)
+    os.makedirs(model_path)
+    tf_model.save(model_path)
+
+    write_bundle(model_path)
 
 def create_image_model(network_name, additional_settings):
     extras = dict(EXTRA_PARAMS)
@@ -91,7 +104,9 @@ def classify(network_name, accuracy_threshold):
 
     assert ex_outputs.shape == (2, noutputs)
     assert bundle_outputs.shape == (2, noutputs)
-    assert np.mean(np.abs(ex_outputs - bundle_outputs)) < 1e-5
+
+    abs_out = np.abs(ex_outputs - bundle_outputs)
+    assert np.mean(abs_out) < 1e-5, abs_out
 
 def test_resnet50():
     classify('resnet50', 0.99)
@@ -106,7 +121,7 @@ def test_resnet18():
     classify('resnet18', 0.96)
 
 def test_mobilenetv2():
-    classify('mobilenetv2', 0.88)
+    classify('mobilenetv2', 0.87)
 
 def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
     file_input = {'bounding_box_threshold': threshold}

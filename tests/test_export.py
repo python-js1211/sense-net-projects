@@ -61,7 +61,7 @@ def test_tflite_deepnet():
     assert probs[0].shape == (1, 1000), probs[0].shape
     # It's generous but the math here is 32-bit
     assert abs(np.sum(probs[0]) - 1) < 1e-5, np.sum(probs[0])
-    assert probs[0][0, 254] > 0.88
+    assert probs[0][0, 254] > 0.87, probs[0][0, 254]
 
     shutil.rmtree(TEST_SAVE_MODEL)
 
