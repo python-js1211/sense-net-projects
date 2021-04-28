@@ -307,4 +307,4 @@ def convert(model, settings, output_path, to_format):
     elif to_format == 'h5':
         model_object.save_weights(output_path)
     else:
-        raise ValueError('Format "%s% unknown' % str(to_format))
+        raise ValueError('Format "%s" unknown' % str(to_format))

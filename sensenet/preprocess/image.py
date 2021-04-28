@@ -14,6 +14,27 @@ CONTRAST_LIMIT = 0.25
 EXPECTED_LOW = 255 * CONTRAST_LIMIT
 EXPECTED_HIGH = 255 * (1 - CONTRAST_LIMIT)
 
+# Unused right now, but I'll leave it here just in case
+def adjust_contrast(image):
+    flattened = tf.sort(tf.reshape(tf.cast(image, tf.float32), (-1,)))
+    npixels = tf.cast(tf.shape(flattened)[0], tf.float32)
+    limit_index = tf.cast(tf.round(npixels * CONTRAST_LIMIT), tf.int32)
+
+    pLow = flattened[limit_index]
+    pHigh = flattened[-limit_index]
+
+    low_contrast = tf.maximum(1.0, pLow / EXPECTED_LOW)
+    high_contrast = tf.maximum(1.0, EXPECTED_HIGH / pHigh)
+    adjustment = tf.maximum(high_contrast, low_contrast)
+
+    return tf.image.adjust_contrast(image, adjustment)
+
+def path_prefix(settings):
+    if settings.image_path_prefix:
+        return settings.image_path_prefix + os.sep
+    else:
+        return ''
+
 def scale_for_box(input_dims, target_dims, minimum):
     y_scale = target_dims[0] / input_dims[0]
     x_scale = target_dims[1] / input_dims[1]
@@ -65,21 +86,6 @@ def resize_with_crop_or_pad(settings, target_dims, image):
         else:
             raise ValueError('Image tensor is rank %d' % len(image.shape))
 
-# Unused right now, but I'll leave it here just in case
-def adjust_contrast(image):
-    flattened = tf.sort(tf.reshape(tf.cast(image, tf.float32), (-1,)))
-    npixels = tf.cast(tf.shape(flattened)[0], tf.float32)
-    limit_index = tf.cast(tf.round(npixels * CONTRAST_LIMIT), tf.int32)
-
-    pLow = flattened[limit_index]
-    pHigh = flattened[-limit_index]
-
-    low_contrast = tf.maximum(1.0, pLow / EXPECTED_LOW)
-    high_contrast = tf.maximum(1.0, EXPECTED_HIGH / pHigh)
-    adjustment = tf.maximum(high_contrast, low_contrast)
-
-    return tf.image.adjust_contrast(image, adjustment)
-
 def rescale(settings, target_shape, image):
     target_dims = tf.constant(target_shape[1:3], tf.int32)
 
@@ -115,11 +121,7 @@ def rescale(settings, target_shape, image):
 def make_image_reader(settings, target_shape):
     n_chan = target_shape[-1]
     input_format = settings.input_image_format or 'file'
-
-    if settings.image_path_prefix:
-        prefix = settings.image_path_prefix + os.sep
-    else:
-        prefix = ''
+    prefix = path_prefix(settings)
 
     def read_image(path_or_bytes):
         if input_format == 'pixel_values':
@@ -148,7 +150,7 @@ class ImageReaderLayer(tf.keras.layers.Layer):
         self._settings = ensure_settings(kwargs['settings'])
         self._input_shape = kwargs['input_shape']
         self._nchannels = self._input_shape[-1]
-        self._prefix = self._settings.image_path_prefix or '.'
+        self._prefix = path_prefix(self._settings)
 
     def call(self, inputs):
         return tf.map_fn(self.read, inputs, fn_output_signature=tf.uint8)
@@ -168,7 +170,7 @@ class ImageFileReaderLayer(ImageReaderLayer):
         super().__init__(**kwargs)
 
     def read(self, path):
-        path = tf.strings.join([self._prefix + os.sep, path])
+        path = tf.strings.join([self._prefix, path])
         img = tf.io.read_file(path)
 
         # Note that, spectacularly weirdly, this method will also
@@ -192,7 +194,7 @@ class ImageShapeReaderLayer(ImageReaderLayer):
         super().__init__(**kwargs)
 
     def read(self, path):
-        path = tf.strings.join([self._prefix + os.sep, path])
+        path = tf.strings.join([self._prefix, path])
         img = tf.io.read_file(path)
         raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
 
