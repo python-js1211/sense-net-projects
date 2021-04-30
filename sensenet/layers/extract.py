@@ -1,4 +1,4 @@
-import pprint
+IGNORED_LAYERS = ['dropout']
 
 def add(config, layer):
     return {'type': 'add'}
@@ -77,6 +77,9 @@ def global_max_pool(config, layer):
 def global_avg_pool(config, layer):
     return {'type': 'global_average_pool_2d'}
 
+def dropout(config, layer):
+    return {'type': 'dropout'}
+
 def lamda(config, layer):
     fname = layer.function.__name__
 
@@ -137,6 +140,7 @@ LAYER_EXTRACTORS = {
     'Conv2D': conv_2d,
     'Dense': dense,
     'DepthwiseConv2D': depthwise_conv_2d,
+    'Dropout': dropout,
     'GlobalAveragePooling2D': global_avg_pool,
     'GlobalMaxPooling2D': global_max_pool,
     'Lambda': lamda,
@@ -180,7 +184,11 @@ def input_indices(layer_map, layer_name, index_set):
 def name_index(layers, name):
     for i, layer in enumerate(layers):
         if layer['name'] == name:
-            return i
+            if 'type' in layer and layer['type'] in IGNORED_LAYERS:
+                assert len(layer['input_names']) == 1
+                return name_index(layers, layer['input_names'][0])
+            else:
+                return i
 
     raise ValueError('%s not found in layer stack' % name)
 
@@ -200,8 +208,7 @@ def extract_one(layer_map, layer):
     try:
         processor = LAYER_EXTRACTORS[config['class_name']]
     except KeyError:
-        pprint.pprint(config)
-        raise ValueError('No processor for type %s' % ltype)
+        raise ValueError('No processor for type %s' % config['class_name'])
 
     new_layer = processor(config['config'], layer)
     new_layer['name'] = config['name']
@@ -219,6 +226,8 @@ def extract_layers_list(model, keras_layers):
 
     for layer in layers[1:]:
         layer['inputs'] = [name_index(layers, n) for n in layer['input_names']]
+
+    layers = list(filter(lambda l: l['type'] not in IGNORED_LAYERS, layers))
 
     for layer in layers:
         layer.pop('input_names')

@@ -10,6 +10,9 @@ import sys
 
 from contextlib import contextmanager
 
+from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS
+from sensenet.constants import IMAGE_PATH
+
 from sensenet.accessors import is_yolo_model, get_output_exposition
 from sensenet.load import load_points
 from sensenet.models.bounding_box import box_detector
@@ -100,15 +103,21 @@ class Deepnet(SaveableModel):
         super().__init__(model, settings)
 
         if isinstance(model, dict):
-            self._preprocessors = model['preprocess']
-            self._model = deepnet_model(model, settings)
-
             outex = get_output_exposition(model)
 
             try:
                 self._classes = outex['values']
             except KeyError:
                 self._classes = None
+
+            self._preprocessors = model['preprocess']
+            self._model = deepnet_model(model, settings)
+
+        pps = self._preprocessors
+        if pps is None or (len(pps) == 1 and pps[0]['type'] == IMAGE_PATH):
+            self._single_image = True
+        else:
+            self._single_image = False
 
     def load_and_predict(self, points):
         pvec = load_points(self._preprocessors, points)
@@ -124,17 +133,34 @@ class Deepnet(SaveableModel):
             else:
                 # Properly wrapped instance
                 return self.load_and_predict(input_data)
-        # Pixel-valued ndarray input image; will only work for single images
         elif isinstance(input_data, np.ndarray):
-            if len(input_data.shape) == 3:
-                array = np.expand_dims(input_data, axis=0)
+            # Pixel-valued ndarray input image; will only work for
+            # single images
+            if self._single_image:
+                assert len(input_data.shape) in [3, 4]
+                if len(input_data.shape) == 3:
+                    array = np.expand_dims(input_data, axis=0)
+                else:
+                    array = input_data
             else:
-                array = input_data
+                assert len(input_data.shape) in [1, 2]
+                if len(input_data.shape) == 1:
+                    numeric = np.expand_dims(input_data, axis=0)
+                else:
+                    numeric = input_data
+
+                array = {
+                    NUMERIC_INPUTS: numeric,
+                    STRING_INPUTS: np.zeros((numeric.shape[0],0))
+                }
 
             return self._model.predict(array)
-        # Single image path or text field
+        # Single image path
         elif isinstance(input_data, str):
-            return self.load_and_predict([[input_data]])
+            if self._single_image:
+                return self.load_and_predict([[input_data]])
+            else:
+                raise ValueError('Single strings not accepted as input')
         else:
             dtype = str(type(input_data))
             raise TypeError('Cannot predict on arguments of type "%s"' % dtype)
