@@ -113,7 +113,10 @@ class Deepnet(SaveableModel):
             self._preprocessors = model['preprocess']
             self._model = deepnet_model(model, settings)
 
-        pps = self._preprocessors
+        # Pretrained image networks should be the only thing missing
+        # this `_preprocessors` attribute
+        pps = getattr(self, _preprocessors, None)
+
         if pps is None or (len(pps) == 1 and pps[0]['type'] == IMAGE_PATH):
             self._single_image = True
         else:
