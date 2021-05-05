@@ -43,7 +43,23 @@ class SaveableModel(object):
     def save_weights(self, save_path):
         self._model.save_weights(save_path)
 
-    def save_bundle(self, save_path):
+    def write_raw_bundle(self, save_path):
+        for k, v in self._model._get_trainable_state().items():
+            k.trainable = False
+
+        self._model.compile()
+        self._model.save(save_path, include_optimizer=False)
+
+    def write_tfjs_files(self, model_path, save_path):
+        # Leave this import unless we absolutely need it
+        import tensorflowjs as tfjs
+
+        with suppress_stdout():
+            tfjs.converters.convert_tf_saved_model(model_path,
+                                                   save_path,
+                                                   skip_op_check=True)
+
+    def save_bundle(self, save_path, tfjs_path=None):
         outdir, model_name = os.path.split(save_path)
 
         assert os.path.exists(outdir) or len(outdir) == 0
@@ -60,13 +76,8 @@ class SaveableModel(object):
         assert not os.path.exists(out_path)
 
         with tempfile.TemporaryDirectory() as saved_model_temp:
-            for k, v in self._model._get_trainable_state().items():
-                k.trainable = False
-
-            self._model.compile()
-
             model_path = os.path.join(saved_model_temp, model_name)
-            self._model.save(model_path)
+            self.write_raw_bundle(model_path)
 
             attributes = dict(vars(self))
             attributes.pop('_model')
@@ -78,6 +89,9 @@ class SaveableModel(object):
             bundle_file = write_bundle(model_path)
             os.rename(bundle_file, out_path)
 
+            if tfjs_path:
+                self.write_tfjs_files(model_path, tfjs_path)
+
     def save_tflite(self, save_path):
         converter = tf.lite.TFLiteConverter.from_keras_model(self._model)
         tflite_model = converter.convert()
@@ -88,15 +102,9 @@ class SaveableModel(object):
         return tflite_model
 
     def save_tfjs(self, save_path):
-        # Leave this import unless we absolutely need it
-        import tensorflowjs as tfjs
-
         with tempfile.TemporaryDirectory() as saved_model_temp:
-            self._model.save(saved_model_temp)
-            with suppress_stdout():
-                tfjs.converters.convert_tf_saved_model(saved_model_temp,
-                                                       save_path,
-                                                       skip_op_check=True)
+            self.write_raw_bundle(saved_model_temp)
+            self.write_tfjs_files(saved_model_temp, save_path)
 
 class Deepnet(SaveableModel):
     def __init__(self, model, settings):
