@@ -31,61 +31,65 @@ def into_arrays(node, all_nodes, outputs):
         this_node[3] = len(all_nodes)
         into_arrays(node[3], all_nodes, outputs)
 
-class DecisionNode():
-    def __init__(self, **kwargs):
-        self._tree = kwargs['tree']
-        assert len(self._tree) == 2 and self._tree[-1] is None
-        self._outputs = self._tree[0]
+def tree_to_arrays(atree):
+    node_list = []
+    outputs = []
 
-    def __call__(self, inputs):
-        output_tensor = tf.reshape(constant(self._outputs), [1, -1])
-        return tf.tile(output_tensor, [tf.shape(inputs)[0], 1])
+    into_arrays(atree, node_list, outputs)
 
-class DecisionTree():
-    def __init__(self, **kwargs):
-        self._tree = kwargs['tree']
+    return {
+        'split_indices': np.array([n[0] for n in node_list], dtype=np.int32),
+        'split_values': np.array([n[1] for n in node_list], dtype=np.float32),
+        'left': np.array([n[2] for n in node_list], dtype=np.int32),
+        'right': np.array([n[3] for n in node_list], dtype=np.int32),
+        'outputs': np.array(outputs, dtype=np.float32)
+    }
 
-        node_list = []
-        outputs = []
+def trees_to_arrays(trees):
+    tarrays = [tree_to_arrays(t) for t in trees]
+    keys = list(tarrays[0].keys())
+    maxes = {k: np.max([t[k].shape[0] for t in tarrays]) for k in keys}
 
-        into_arrays(self._tree, node_list, outputs)
+    output_arrays = {}
+    ntrees = len(tarrays)
 
-        self._split_indices = np.array([n[0] for n in node_list], dtype=np.int32)
-        self._split_values = np.array([n[1] for n in node_list], dtype=np.float32)
-        self._left = np.array([n[2] for n in node_list], dtype=np.int32)
-        self._right = np.array([n[3] for n in node_list], dtype=np.int32)
-        self._outputs = np.array(outputs, dtype=np.float32)
+    for k in keys:
+        if k != 'outputs':
+            atype = tarrays[0][k].dtype
+            all_array = np.zeros((ntrees, maxes[k]), dtype=atype) - 1
 
-    def __call__(self, inputs):
-        out_idxs = tl.BigMLTreeify(points=inputs,
-                                   split_indices=self._split_indices,
-                                   split_values=self._split_values,
-                                   left=self._left,
-                                   right=self._right)
+            for i, tarraymap in enumerate(tarrays):
+                tarraylen = tarraymap[k].shape[0]
+                all_array[i, 0:tarraylen] = tarraymap[k]
 
-        return tf.gather(self._outputs, tf.reshape(out_idxs, (-1,)))
+            output_arrays[k] = all_array
+
+    noutputs = tarrays[0]['outputs'].shape[1]
+    prob_array = np.zeros((ntrees, maxes['outputs'], noutputs), dtype=np.float32)
+
+    for i, tarraymap in enumerate(tarrays):
+        problen = tarraymap['outputs'].shape[0]
+        prob_array[i, 0:problen, :] = tarraymap['outputs']
+
+    output_arrays['outputs'] = prob_array
+
+    return output_arrays
 
 class DecisionForest():
-    def __init__(self, **kwargs):
-        self._forest = kwargs['forest']
-        self._trees = []
-
-        for tree in self._forest:
-            if len(tree) == 2 and tree[-1] is None:
-                self._trees.append(DecisionNode(tree=tree))
-            else:
-                self._trees.append(DecisionTree(tree=tree))
+    def __init__(self, trees):
+        self._trees = trees
+        self._arrays = trees_to_arrays(trees)
+        self._noutputs = self._arrays['outputs'].shape[-1]
 
     def __call__(self, inputs):
-        all_preds = []
+        outputs = tl.BigMLTreeify(points=inputs,
+                                  split_indices=self._arrays['split_indices'],
+                                  split_values=self._arrays['split_values'],
+                                  left=self._arrays['left'],
+                                  right=self._arrays['right'],
+                                  outputs=self._arrays['outputs'])
 
-        for tree in self._trees:
-            preds = tree(inputs)
-            all_preds.append(preds)
-
-        summed = tf.math.add_n(all_preds)
-
-        return summed / len(all_preds)
+        return tf.reshape(outputs, (-1, self._noutputs))
 
 class ForestPreprocessor(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -97,7 +101,7 @@ class ForestPreprocessor(tf.keras.layers.Layer):
         self._ranges = []
 
         for input_range, trees in self._trees:
-            self._forests.append([input_range, DecisionForest(forest=trees)])
+            self._forests.append([input_range, DecisionForest(trees)])
 
     def call(self, inputs):
         all_preds = []

@@ -12,7 +12,7 @@ tf = sensenet.importers.import_tensorflow()
 np = sensenet.importers.import_numpy()
 
 from sensenet.layers.utils import constant
-from sensenet.layers.tree import DecisionTree, DecisionForest
+from sensenet.layers.tree import DecisionForest
 
 from .utils import read_zipped_json
 
@@ -56,15 +56,7 @@ def test_simple_tree_prediction():
         test_tree[3][3][3][0]
     ], dtype=np.float32)
 
-    # nodes = to_node_list(test_tree, len(results[0]), 0)
-    # nodes.sort(key=lambda x: x['node_id'])
-
-    # assert [n['node_id'] for n in nodes] == list(range(len(nodes)))
-    # leaves = to_leaf_list(test_tree, [], [])
-    # paths = to_paths(leaves)
-    # outputs = propagate(paths, np.array(test_points, dtype=np.float32))
-
-    tree = DecisionTree(tree=test_tree)
+    tree = DecisionForest([test_tree])
     preds1 = tree(constant(test_points))
     preds2 = tree(constant(test_points))
 
@@ -124,7 +116,7 @@ def test_predictions():
     sk_time = time.time() - start
 
     trees = trees_to_list(ensemble)
-    forest = DecisionForest(forest=trees)
+    forest = DecisionForest(trees)
     inten = tf.keras.Input((8,), dtype=tf.float32)
     outten = forest(inten)
     model = tf.keras.Model(inputs=inten, outputs=outten)
