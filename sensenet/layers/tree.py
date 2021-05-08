@@ -89,19 +89,17 @@ class DecisionForest():
                                right=self._arrays['right'],
                                outputs=self._arrays['outputs'])
 
-class ForestPreprocessor(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        newargs = dict(kwargs)
-        self._trees = newargs.pop('trees')
-        super().__init__(**newargs)
-
+class ForestPreprocessor():
+    def __init__(self, trees=None):
+        self._trees = trees
         self._forests = []
         self._ranges = []
 
-        for input_range, trees in self._trees:
-            self._forests.append([input_range, DecisionForest(trees)])
+        if trees:
+            for input_range, trees in self._trees:
+                self._forests.append([input_range, DecisionForest(trees)])
 
-    def call(self, inputs):
+    def __call__(self, inputs):
         all_preds = []
 
         for input_range, forest in self._forests:
@@ -110,9 +108,3 @@ class ForestPreprocessor(tf.keras.layers.Layer):
             all_preds.append(forest(tree_inputs))
 
         return tf.concat(all_preds + [inputs], -1)
-
-    def get_config(self):
-        config = super().get_config()
-        config['trees'] = self._trees
-
-        return config
