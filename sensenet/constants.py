@@ -1,7 +1,7 @@
 # Data and objective types
 NUMERIC = 'numeric'
 CATEGORICAL = 'categorical'
-IMAGE_PATH = 'image'
+IMAGE = 'image'
 TRIPLET = 'triplet'
 BOUNDING_BOX = 'bounding_box'
 

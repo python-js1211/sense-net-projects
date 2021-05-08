@@ -1,7 +1,7 @@
 import sensenet.importers
 tf = sensenet.importers.import_tensorflow()
 
-from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE_PATH
+from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE
 from sensenet.constants import MEAN, STANDARD_DEVIATION
 from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
@@ -46,7 +46,7 @@ class Preprocessor():
                 means.append(mean)
                 stdevs.append(stdev)
 
-            elif ptype in [IMAGE_PATH, CATEGORICAL]:
+            elif ptype in [IMAGE, CATEGORICAL]:
                 if block_start is not None:
                     self._feature_blocks.append([block_start, i])
 
@@ -54,7 +54,7 @@ class Preprocessor():
                 stdevs.append(1.0)
                 block_start = None
 
-                if ptype == IMAGE_PATH:
+                if ptype == IMAGE:
                     self._feature_blocks.append([i, self._image_preprocessor])
                 else:
                     self._feature_blocks.append([i, CategoricalPreprocessor(pp)])

@@ -4,7 +4,7 @@ kl = sensenet.importers.import_keras_layers()
 
 from sensenet.accessors import get_image_shape, get_output_exposition
 from sensenet.accessors import get_image_tensor_shape
-from sensenet.constants import IMAGE_PATH, NUMERIC, CATEGORICAL
+from sensenet.constants import IMAGE, NUMERIC, CATEGORICAL
 from sensenet.constants import NUMERIC_INPUTS, PIXEL_INPUTS
 from sensenet.layers.construct import feed_through, tree_preprocessor
 from sensenet.load import load_points, count_types

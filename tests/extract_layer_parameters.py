@@ -3,7 +3,7 @@
 import sys
 import json
 
-from sensenet.constants import ANCHORS, IMAGE_PATH, CATEGORICAL, BOUNDING_BOX
+from sensenet.constants import ANCHORS, IMAGE, CATEGORICAL, BOUNDING_BOX
 from sensenet.layers.construct import layer_sequence
 from sensenet.io.extract import extract_layers
 

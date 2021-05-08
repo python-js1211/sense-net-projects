@@ -10,7 +10,7 @@ import sys
 
 from contextlib import contextmanager
 
-from sensenet.constants import NUMERIC_INPUTS, IMAGE_PATH
+from sensenet.constants import NUMERIC_INPUTS, IMAGE
 
 from sensenet.accessors import is_yolo_model, get_output_exposition
 from sensenet.load import load_points, count_types
@@ -123,7 +123,7 @@ class Deepnet(SaveableModel):
         # Pretrained image networks should be the only thing missing
         # this `_preprocessors` attribute
         if getattr(self, '_preprocessors', None) is None:
-            self._preprocessors = [{'type': IMAGE_PATH, 'index': 0}]
+            self._preprocessors = [{'type': IMAGE, 'index': 0}]
 
         self._ncolumns, self._nimages = count_types(self._preprocessors)
 

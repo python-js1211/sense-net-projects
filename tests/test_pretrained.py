@@ -4,7 +4,9 @@ tf = sensenet.importers.import_tensorflow()
 
 import os
 
-from sensenet.constants import CATEGORICAL, IMAGE_PATH, BOUNDING_BOX
+from PIL import Image
+
+from sensenet.constants import CATEGORICAL, IMAGE, BOUNDING_BOX
 from sensenet.constants import NUMERIC_INPUTS, WARP, CROP
 
 from sensenet.accessors import get_image_shape
@@ -144,7 +146,7 @@ def test_yolov4():
 def test_empty():
     detector = create_image_model('tinyyolov4', None)
     image_path = os.path.join(TEST_IMAGE_DATA, 'black.png')
-    image = load_points([{'type': IMAGE_PATH, 'index': 0}], [[image_path]])
+    image = load_points([{'type': IMAGE, 'index': 0}], [[image_path]])
     boxes, scores, classes  = detector.predict(image)
 
     assert len(boxes[0]) == 0
@@ -154,7 +156,7 @@ def test_empty():
 def test_scaling():
     detector = create_image_model('tinyyolov4', None)
     image_path = os.path.join(TEST_IMAGE_DATA, 'strange_car.png')
-    image = load_points([{'type': IMAGE_PATH, 'index': 0}], [[image_path]])
+    image = load_points([{'type': IMAGE, 'index': 0}], [[image_path]])
     boxes, scores, classes  = detector.predict(image)
 
     assert 550 < boxes[0, 0, 0] < 600,  boxes[0, 0]
@@ -164,3 +166,19 @@ def test_scaling():
 
     assert scores[0] > 0.9
     assert classes[0] == 2
+
+def test_black_and_white():
+    pixel_model = create_image_model('mobilenetv2', None)
+    image_path = os.path.join(TEST_IMAGE_DATA, 'model_t.jpg')
+
+    point = load_points([{'type': IMAGE, 'index': 0}], [[image_path]])
+    pred = pixel_model.predict(point)
+    check_image_prediction(pred, 661, 0.95, 0.02)
+
+    with Image.open(image_path) as img:
+        image_array = np.array(img)
+
+
+    point = load_points([{'type': IMAGE, 'index': 0}], [[image_array]])
+    pred = pixel_model.predict(point)
+    check_image_prediction(pred, 661, 0.95, 0.02)
