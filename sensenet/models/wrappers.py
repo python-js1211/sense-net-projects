@@ -36,8 +36,9 @@ class SaveableModel(object):
         if isinstance(keras_model, tf.keras.Model):
             self._model = keras_model
 
-            for key in settings:
-                setattr(self, key, settings[key])
+            if settings:
+                for key in settings:
+                    setattr(self, key, settings[key])
 
     def save_weights(self, save_path):
         self._model.save_weights(save_path)
@@ -184,7 +185,7 @@ class ObjectDetector(SaveableModel):
             self._model = box_detector(model, settings)
             self._classes = model['output_exposition']['values']
             self._unfiltered = settings.output_unfiltered_boxes
-        elif 'output_unfiltered_boxes' in settings:
+        elif settings and 'output_unfiltered_boxes' in settings:
             self._unfiltered = settings['output_unfiltered_boxes']
 
     def load_and_predict(self, points):
@@ -331,12 +332,6 @@ def convert(model, settings, output_path, to_format):
         model_object = model
     else:
         model_settings = ensure_settings(settings)
-
-        if to_format in ['tflite', 'tfjs']:
-            # This is the only valid input format for tflite; it
-            # doesn't know how to read files (as of TF 2.3)
-            model_settings.input_image_format = 'pixel_values'
-
         model_object = create_model(model, settings=model_settings)
 
     if to_format == 'tflite':

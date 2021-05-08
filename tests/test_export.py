@@ -16,18 +16,14 @@ TEST_SAVE_MODEL = os.path.join(TEST_DATA_DIR, 'test_model_save')
 TEST_TF_LITE_MODEL = os.path.join(TEST_SAVE_MODEL, 'model.tflite')
 
 def make_classifier(network_name):
-    pixel_input = {'input_image_format': 'pixel_values'}
-    model = create_image_model(network_name, pixel_input)
-    return Deepnet(model, pixel_input)
+    model = create_image_model(network_name, None)
+    return Deepnet(model, None)
 
 def make_detector(network_name, unfiltered):
-    pixel_input = {
-        'input_image_format': 'pixel_values',
-        'output_unfiltered_boxes': unfiltered
-    }
+    filtering = {'output_unfiltered_boxes': unfiltered}
+    model = create_image_model(network_name, filtering)
 
-    model = create_image_model(network_name, pixel_input)
-    return ObjectDetector(model, pixel_input)
+    return ObjectDetector(model, filtering)
 
 def tflite_predict(model, len_inputs, len_outputs, test_file):
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
