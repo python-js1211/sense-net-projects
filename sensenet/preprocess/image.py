@@ -138,70 +138,6 @@ def make_image_reader(input_format, target_shape, file_prefix, settings):
 
     return read_image
 
-# class ImageReaderLayer(tf.keras.layers.Layer):
-#     def __init__(self, **kwargs):
-#         layer_args = dict(kwargs)
-#         layer_args.pop('settings')
-#         layer_args.pop('input_shape')
-
-#         super().__init__(**layer_args)
-
-#         self._settings = ensure_settings(kwargs['settings'])
-#         self._input_shape = kwargs['input_shape']
-#         self._nchannels = self._input_shape[-1]
-#         self._prefix = path_prefix(self._settings)
-
-#     def call(self, inputs):
-#         return tf.map_fn(self.read, inputs, fn_output_signature=tf.uint8)
-
-#     def get_config(self):
-#         config = super().get_config()
-
-#         config.update({
-#             'settings': dict(vars(self._settings)),
-#             'input_shape': list(self._input_shape)
-#         })
-
-#         return config
-
-# class ImageFileReaderLayer(ImageReaderLayer):
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-
-#     def read(self, path):
-#         path = tf.strings.join([self._prefix, path])
-#         img = tf.io.read_file(path)
-
-#         # Note that, spectacularly weirdly, this method will also
-#         # work for pngs and gifs.  Even wierder, We can't use
-#         # `decode_image` here because the tensor that comes out
-#         # doesn't have a shape!
-#         raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
-
-#         return rescale(self._settings, self._input_shape, raw)
-
-# class ImageBytesReaderLayer(ImageReaderLayer):
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-
-#     def read(self, img):
-#         raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
-#         return rescale(self._settings, self._input_shape, raw)
-
-# class ImageShapeReaderLayer(ImageReaderLayer):
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-
-#     def read(self, path):
-#         path = tf.strings.join([self._prefix, path])
-#         img = tf.io.read_file(path)
-#         raw = tf.io.decode_jpeg(img, dct_method=DCT, channels=self._nchannels)
-
-#         return rescale(self._settings, self._input_shape, raw), tf.shape(raw)
-
-#     def call(self, inputs):
-#         return self.read(inputs)
-
 class ImageReader():
     def __init__(self, network, settings):
         self._settings = settings
@@ -211,26 +147,9 @@ class ImageReader():
             net_meta = network['metadata']
             self._settings.rescale_type = net_meta.get('rescale_type', WARP)
 
-    # def reader(self, get_shape=False):
-    #     config = {
-    #         'settings': dict(vars(self._settings)),
-    #         'input_shape': list(self._input_shape)
-    #     }
-
-    #     if self._settings.input_image_format == 'image_bytes':
-    #         return ImageBytesReaderLayer(**config)
-    #     elif get_shape:
-    #         return ImageShapeReaderLayer(**config)
-    #     else:
-    #         return ImageFileReaderLayer(**config)
-
     def __call__(self, inputs):
-        # if self._settings.input_image_format == 'pixel_values':
         dims = tf.constant(self._input_shape[1:3], tf.int32)
         images = rescale(self._settings, self._input_shape, inputs)
-        # else:
-        #     read_layer = self.reader()
-        #     images = read_layer(inputs)
 
         return tf.cast(images, tf.float32)
 
@@ -240,21 +159,9 @@ class BoundingBoxImageReader(ImageReader):
         self._settings.rescale_type = PAD
 
     def __call__(self, inputs):
-        # if self._settings.input_image_format == 'pixel_values':
         dims = tf.constant(self._input_shape[1:3], tf.int32)
         image = rescale(self._settings, self._input_shape, inputs)
         original_dims = tf.expand_dims(tf.shape(inputs)[1:], axis=0)
-        # else:
-        #     read = self.reader(True)
-
-        #     # We're explicitly saying here we only take one filename at
-        #     # a time; if multiple files are passed in, all but the first
-        #     # one are ignored.
-        #     image, original_dims = read(inputs[0, 0])
-        #     image = tf.reshape(image, self._input_shape[1:])
-
-        #     image = tf.expand_dims(image, axis=0)
-        #     original_dims = tf.expand_dims(original_dims, axis=0)
 
         return tf.cast(image, tf.float32), original_dims
 
