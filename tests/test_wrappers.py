@@ -8,6 +8,7 @@ import gzip
 
 from PIL import Image
 
+from sensenet.constants import DCT
 from sensenet.models.wrappers import create_model
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
@@ -25,23 +26,24 @@ def make_mobilenet(settings):
     return create_model(network, settings)
 
 def check_pixels_and_file(settings, pos_threshold, neg_threshold):
-    pix_settings = dict(settings)
-    pix_settings['input_image_format'] = 'pixel_values'
-    pix_model = make_mobilenet(pix_settings)
+    pixel_model = make_mobilenet(settings)
 
-    file_settings = dict(settings)
-    file_settings['input_image_format'] = 'file'
-    file_model = make_mobilenet(file_settings)
+    ibytes = tf.io.read_file(BUS_PATH)
+    iten = tf.io.decode_jpeg(ibytes, dct_method=DCT, channels=3)
+    image_pixels = iten.numpy()
 
-    image_pixels = np.array(Image.open(BUS_PATH))
+    with Image.open(BUS_PATH) as img:
+        if settings.get('color_space', '').endswith('a'):
+            image_pixels = np.array(img.convert('RGBA'))
+            new_settings = dict(settings)
+            new_settings['color_space'] = settings['color_space'][:3]
+            file_model = make_mobilenet(new_settings)
+        else:
+            image_pixels = np.array(img)
+            file_model = pixel_model
 
-    if pix_settings.get('color_space', '').endswith('a'):
-        new_pixels = np.zeros((image_pixels.shape[0], image_pixels.shape[1], 4))
-        new_pixels[:,:,:3] = image_pixels
-        image_pixels = new_pixels
-
-    pixel_pred = pix_model(image_pixels)
     file_pred = file_model(BUS_PATH)
+    pixel_pred = pixel_model([[image_pixels]])
 
     diffs = np.abs(pixel_pred - file_pred)
     assert np.all(diffs < 1e-3), np.max(diffs)
