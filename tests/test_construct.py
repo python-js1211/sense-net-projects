@@ -154,8 +154,7 @@ def test_dropblock():
     graph = build_graph(network['layers'], LAYER_FUNCTIONS, inputs)
     model = tf.keras.Model(inputs=inputs, outputs=graph[-1].output)
 
-    settings = Settings({'image_path_prefix': 'tests/data/images'})
-    reader = make_image_reader(settings, image_shape)
+    reader = make_image_reader('file', image_shape, 'tests/data/images', None)
     pizzas = ['pizza_people.jpg'] * 16
 
     # show_outputs(pizzas, reader, model)

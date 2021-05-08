@@ -118,7 +118,9 @@ def rescale(settings, target_shape, image):
     else:
         return new_image
 
-def make_image_reader(input_format, target_shape, file_prefix, settings):
+def make_image_reader(input_format, target_shape, file_prefix, read_settings):
+    settings = ensure_settings(read_settings)
+
     n_chan = target_shape[-1]
     prefix = path_prefix(file_prefix)
 

@@ -14,7 +14,6 @@ from sensenet.layers.tree import ForestPreprocessor
 from sensenet.load import load_points
 from sensenet.models.wrappers import create_model
 from sensenet.models.settings import Settings
-from sensenet.io.save import assets_for_deepnet, write_model
 
 from .utils import TEST_DATA_DIR, read_regression
 
