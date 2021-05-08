@@ -44,12 +44,12 @@ setup(
     ext_modules=[tree_module],
     tests_require=[
         'nose>=1.3,<1.4',
-        'pillow>=8.2,<8.3',
         'scikit-learn>=0.24,<0.25'
     ],
     test_suite='nose.collector',
     install_requires=[
         'numpy>=1.19,<1.20',
+        'pillow>=8.2,<8.3',
         'tensorflow>=2.4,<2.5',
         'tensorflowjs>=3.4,<3.5'
     ])
