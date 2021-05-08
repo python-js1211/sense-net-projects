@@ -6,8 +6,6 @@ COLOR_SPACES += [f.upper() for f in COLOR_SPACES]
 OPTIONAL = {
     'bounding_box_threshold': [1e-8, 1.0],
     'color_space': COLOR_SPACES,
-    'image_path_prefix': str,
-    'input_image_format': str,
     'iou_threshold': [1e-8, 1.0],
     'load_pretrained_weights': bool,
     'max_objects': int,

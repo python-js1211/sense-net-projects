@@ -8,6 +8,7 @@ from sensenet.constants import SCORE_THRESHOLD, IGNORE_THRESHOLD, IOU_THRESHOLD
 from sensenet.accessors import number_of_classes, get_image_shape
 from sensenet.accessors import get_image_tensor_shape, yolo_outputs
 from sensenet.layers.yolo import Yolo
+from sensenet.models.deepnet import instantiate_inputs
 from sensenet.models.settings import ensure_settings
 from sensenet.preprocess.image import BoundingBoxImageReader, ImageLoader
 from sensenet.pretrained import load_pretrained_weights
@@ -115,14 +116,8 @@ def box_detector(model, input_settings):
     yolo = Yolo(network, nclasses)
     locator = BoxLocator(network, nclasses, settings)
 
-    if settings.input_image_format == 'pixel_values':
-        image_shape = get_image_tensor_shape(settings)
-        image_input = kl.Input(image_shape,
-                               dtype=tf.float32,
-                               name='image_pixel_inputs')
-    else:
-        image_input = kl.Input((1,), dtype=tf.string, name='image_path')
-
+    assert len(model['preprocess']) == 1
+    image_input = instantiate_inputs(model, settings)
     raw_image, original_shape = reader(image_input)
 
     image = loader(raw_image)

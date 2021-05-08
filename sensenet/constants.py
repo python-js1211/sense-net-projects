@@ -38,7 +38,6 @@ PAD = 'pad'
 CROP = 'crop'
 
 # Names of network inputs
-STRING_INPUTS = 'string_inputs'
 NUMERIC_INPUTS = 'numeric_inputs'
 PIXEL_INPUTS = 'image_pixel_input'
 

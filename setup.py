@@ -23,8 +23,8 @@ with open(path.join(here, 'README.md'), 'r') as f:
 compile_args = ['-std=c++11', '-fPIC'] + tf.sysconfig.get_compile_flags()
 
 tree_module = Extension(__tree_ext_prefix__,
-                        define_macros = [('MAJOR_VERSION', '0'),
-                                         ('MINOR_VERSION', '1')],
+                        define_macros = [('MAJOR_VERSION', '1'),
+                                         ('MINOR_VERSION', '0')],
                         include_dirs=[tf.sysconfig.get_include()],
                         library_dirs=[tf.sysconfig.get_lib()],
                         extra_compile_args=compile_args,

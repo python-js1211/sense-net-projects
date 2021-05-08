@@ -11,7 +11,14 @@ REGISTER_OP("BigMLTreeify")
     .Input("left: int32")
     .Input("right: int32")
     .Input("outputs: float")
-    .Output("output_features: float");
+    .Output("output_features: float")
+    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+        auto npoints = c->Dim(c->input(0), 0);
+        auto nprobs = c->Dim(c->input(5), 2);
+        c->set_output(0, c->Matrix(npoints, nprobs));
+
+        return Status::OK();
+    });
 
 class BigMLTreeOp : public OpKernel {
 public:

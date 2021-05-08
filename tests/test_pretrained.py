@@ -23,8 +23,6 @@ from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 
 EXTRA_PARAMS = {
     'bounding_box_threshold': 0.5,
-    'image_path_prefix': TEST_IMAGE_DATA,
-    'input_image_format': 'file',
     'load_pretrained_weights': True,
     'rescale_type': CROP
 }
@@ -57,8 +55,9 @@ def reader_for_network(network_name, additional_settings):
     if additional_settings:
         extras.update(additional_settings)
 
+    settings = Settings(extras)
     image_shape = get_image_shape(get_pretrained_network(network_name))
-    return make_image_reader(Settings(extras), image_shape)
+    return make_image_reader('file', image_shape, TEST_IMAGE_DATA, settings)
 
 def check_image_prediction(prediction, index, pos_threshold, neg_threshold):
     for i, p in enumerate(prediction.flatten().tolist()):
@@ -68,39 +67,30 @@ def check_image_prediction(prediction, index, pos_threshold, neg_threshold):
             assert p < neg_threshold, str((i, p))
 
 def classify(network_name, accuracy_threshold):
-    pixel_input = {'input_image_format': 'pixel_values'}
-
     network = get_pretrained_network(network_name)
     nlayers = len(network['image_network']['layers'])
     noutputs = network['image_network']['metadata']['outputs']
     preprocessors = network['preprocess']
 
-    image_model = create_image_model(network_name, None)
-    pixel_model = create_image_model(network_name, pixel_input)
-    read = reader_for_network(network_name, None)
+    pixel_model = create_image_model(network_name, None)
 
     assert len(get_image_layers(pixel_model)) == nlayers
 
     for image, cidx in CLASSIFIER_TEST_IMAGES:
-        point = load_points(preprocessors, [[image]])
-        file_pred = image_model.predict(point)
+        image_path = os.path.join(TEST_IMAGE_DATA, image)
+        point = load_points(preprocessors, [[image_path]])
+        pred = pixel_model.predict(point)
 
-        img_px = np.expand_dims(read(image).numpy(), axis=0)
-        pixel_pred = pixel_model.predict(img_px)
+        check_image_prediction(pred, cidx, accuracy_threshold, 0.02)
 
-        for pred in [pixel_pred, file_pred]:
-            check_image_prediction(pred, cidx, accuracy_threshold, 0.02)
-
-    ex_mod = image_feature_extractor(image_model)
+    ex_mod = image_feature_extractor(pixel_model)
     bundle_mod = create_model(get_extractor_bundle(network_name))
 
-    images = CLASSIFIER_TEST_IMAGES
-    bundle_in = np.array([read(img[0]).numpy() for img in images])
-    ex_in = load_points(preprocessors, [[img[0]] for img in images])
-    ex_in.pop(NUMERIC_INPUTS)
+    read = reader_for_network(network_name, None)
+    img_arrays = np.array([read(im[0]).numpy() for im in CLASSIFIER_TEST_IMAGES])
 
-    bundle_outputs = bundle_mod(bundle_in)
-    ex_outputs = ex_mod(ex_in)
+    bundle_outputs = bundle_mod(img_arrays)
+    ex_outputs = ex_mod(img_arrays)
 
     assert ex_outputs.shape == (2, noutputs)
     assert bundle_outputs.shape == (2, noutputs)
@@ -124,34 +114,26 @@ def test_mobilenetv2():
     classify('mobilenetv2', 0.87)
 
 def detect_bounding_boxes(network_name, nboxes, class_list, threshold):
-    file_input = {'bounding_box_threshold': threshold}
-
-    pixel_input = {
-        'input_image_format': 'pixel_values',
-        'bounding_box_threshold': threshold
-    }
+    extras = {'bounding_box_threshold': threshold}
 
     network = get_pretrained_network(network_name)
     nlayers = len(network['image_network']['layers'])
 
-    image_detector = create_image_model(network_name, file_input)
-    pixel_detector = create_image_model(network_name, pixel_input)
+    detector = create_image_model(network_name, extras)
     read = reader_for_network(network_name, {'rescale_type': 'pad'})
 
-    image_layers = get_image_layers(pixel_detector)
-    ex_layers = extract_layers_list(pixel_detector, image_layers)
+    image_layers = get_image_layers(detector)
+    ex_layers = extract_layers_list(detector, image_layers)
 
     assert len(image_layers) == len(ex_layers) == nlayers
 
-    file_pred = image_detector.predict([['pizza_people.jpg']])
     img_px = np.expand_dims(read('pizza_people.jpg').numpy(), axis=0)
-    pixel_pred = pixel_detector.predict(img_px)
+    pred = detector.predict(img_px)
 
-    for pred in [file_pred, pixel_pred]:
-        boxes, scores, classes = pred[0][0], pred[1][0], pred[2][0]
+    boxes, scores, classes = pred[0][0], pred[1][0], pred[2][0]
 
-        assert len(boxes) == len(scores) == nboxes, len(boxes)
-        assert sorted(set(classes)) == sorted(class_list), classes
+    assert len(boxes) == len(scores) == nboxes, len(boxes)
+    assert sorted(set(classes)) == sorted(class_list), classes
 
 def test_tinyyolov4():
     detect_bounding_boxes('tinyyolov4', 5, [0, 53], 0.4)
@@ -161,7 +143,9 @@ def test_yolov4():
 
 def test_empty():
     detector = create_image_model('tinyyolov4', None)
-    boxes, scores, classes  = detector.predict([['black.png']])
+    image_path = os.path.join(TEST_IMAGE_DATA, 'black.png')
+    image = load_points([{'type': IMAGE_PATH, 'index': 0}], [[image_path]])
+    boxes, scores, classes  = detector.predict(image)
 
     assert len(boxes[0]) == 0
     assert len(scores[0]) == 0
@@ -169,7 +153,9 @@ def test_empty():
 
 def test_scaling():
     detector = create_image_model('tinyyolov4', None)
-    boxes, scores, classes  = detector.predict([['strange_car.png']])
+    image_path = os.path.join(TEST_IMAGE_DATA, 'strange_car.png')
+    image = load_points([{'type': IMAGE_PATH, 'index': 0}], [[image_path]])
+    boxes, scores, classes  = detector.predict(image)
 
     assert 550 < boxes[0, 0, 0] < 600,  boxes[0, 0]
     assert 220 < boxes[0, 0, 1] < 270,  boxes[0, 0]

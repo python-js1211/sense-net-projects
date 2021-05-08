@@ -3,8 +3,9 @@ tf = sensenet.importers.import_tensorflow()
 
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE_PATH
 from sensenet.constants import MEAN, STANDARD_DEVIATION
-from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS
+from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
+from sensenet.load import count_types
 from sensenet.preprocess.categorical import CategoricalPreprocessor
 from sensenet.preprocess.image import ImagePreprocessor
 
@@ -13,14 +14,15 @@ class Preprocessor():
         if model.get('image_network', None) is not None:
             img_proc = ImagePreprocessor(model['image_network'], extras)
             self._image_preprocessor = img_proc
+        else:
+            self._image_preprocessor = None
 
+        self._ncolumns, self._nimages = count_types(model['preprocess'])
         self._feature_blocks = []
 
         means = []
         stdevs = []
         block_start = None
-
-        # pprint(model['preprocess'])
 
         for i, pp in enumerate(model['preprocess']):
             ptype = pp['type']
@@ -66,37 +68,45 @@ class Preprocessor():
         self._stdevs = tf.constant(stdevs)
 
     def __call__(self, inputs):
-        str_idx = 0
+        img_idx = 0
         processed = []
 
-        try:
-            string_inputs = inputs[STRING_INPUTS]
+        if isinstance(inputs, dict):
+            pixel_inputs = inputs[PIXEL_INPUTS]
             numeric_inputs = inputs[NUMERIC_INPUTS]
-        except TypeError:
-            string_inputs = None
+        elif self._image_preprocessor is not None:
+            pixel_inputs = inputs
+            numeric_inputs = None
+        else:
+            pixel_inputs = None
             numeric_inputs = inputs
 
-        if len(numeric_inputs.shape) == 2:
+        if numeric_inputs is not None:
             standardized_inputs = (numeric_inputs - self._means) / self._stdevs
         else:
             standardized_inputs = None
 
         for i, block in enumerate(self._feature_blocks):
             if isinstance(block[1], int):
+                # This block is a bunch of numeric features that can
+                # be passed through without modification
                 start, end = block
-                processed.append(standardized_inputs[:, start:end])
+                processed.append(standardized_inputs[:,start:end])
             else:
+                # It's not a numeric feature; there's a processor
+                # associated with this column, so process it.
                 idx, processor = block
 
                 if isinstance(processor, ImagePreprocessor):
-                    if string_inputs is not None:
-                        ith_string = tf.reshape(string_inputs[:,str_idx], (-1,))
-                        processed.append(processor(ith_string))
-                        str_idx += 1
+                    if self._nimages == 1:
+                        ith_img = pixel_inputs
                     else:
-                        processed.append(processor(numeric_inputs))
+                        ith_img = pixel_inputs[:,img_idx,:,:,:]
+
+                    processed.append(processor(ith_img))
+                    img_idx += 1
                 elif isinstance(processor, CategoricalPreprocessor):
-                    cat_idxs = tf.reshape(numeric_inputs[:, idx], (-1,))
+                    cat_idxs = tf.reshape(numeric_inputs[:,idx], (-1,))
                     processed.append(processor(cat_idxs))
 
         if len(processed) > 1:

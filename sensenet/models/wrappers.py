@@ -10,11 +10,10 @@ import sys
 
 from contextlib import contextmanager
 
-from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS
-from sensenet.constants import IMAGE_PATH
+from sensenet.constants import NUMERIC_INPUTS, IMAGE_PATH
 
 from sensenet.accessors import is_yolo_model, get_output_exposition
-from sensenet.load import load_points
+from sensenet.load import load_points, count_types
 from sensenet.models.bounding_box import box_detector
 from sensenet.models.bundle import read_bundle, write_bundle, BUNDLE_EXTENSION
 from sensenet.models.deepnet import deepnet_model
@@ -123,12 +122,10 @@ class Deepnet(SaveableModel):
 
         # Pretrained image networks should be the only thing missing
         # this `_preprocessors` attribute
-        pps = getattr(self, '_preprocessors', None)
+        if getattr(self, '_preprocessors', None) is None:
+            self._preprocessors = [{'type': IMAGE_PATH, 'index': 0}]
 
-        if pps is None or (len(pps) == 1 and pps[0]['type'] == IMAGE_PATH):
-            self._single_image = True
-        else:
-            self._single_image = False
+        self._ncolumns, self._nimages = count_types(self._preprocessors)
 
     def load_and_predict(self, points):
         pvec = load_points(self._preprocessors, points)
@@ -147,28 +144,31 @@ class Deepnet(SaveableModel):
         elif isinstance(input_data, np.ndarray):
             # Pixel-valued ndarray input image; will only work for
             # single images
-            if self._single_image:
-                assert len(input_data.shape) in [3, 4]
-                if len(input_data.shape) == 3:
-                    array = np.expand_dims(input_data, axis=0)
+            if self._nimages == self._ncolumns == 1:
+                if len(input_data.shape) == 4:
+                    return self._model.predict(input_data)
                 else:
-                    array = input_data
-            else:
+                    return self.load_and_predict([[input_data]])
+            elif self._nimages == self._ncolumns:
+                if len(input_data.shape) == 5:
+                    # [row, nth_image, h, w, channels]
+                    return self._model.predict(input_data)
+                else:
+                    # [nth_image, h, w, ...]
+                    return self.load_and_predict([[img for img in input_data]])
+            elif self._nimages == 0:
                 assert len(input_data.shape) in [1, 2]
                 if len(input_data.shape) == 1:
                     numeric = np.expand_dims(input_data, axis=0)
                 else:
                     numeric = input_data
-
-                array = {
-                    NUMERIC_INPUTS: numeric,
-                    STRING_INPUTS: np.zeros((numeric.shape[0],0))
-                }
+            else:
+                raise ValueError('Cannot use ndarray for image+features models')
 
             return self._model.predict(array)
         # Single image path
         elif isinstance(input_data, str):
-            if self._single_image:
+            if self._nimages == self._ncolumns == 1:
                 return self.load_and_predict([[input_data]])
             else:
                 raise ValueError('Single strings not accepted as input')
@@ -187,27 +187,31 @@ class ObjectDetector(SaveableModel):
         elif 'output_unfiltered_boxes' in settings:
             self._unfiltered = settings['output_unfiltered_boxes']
 
+    def load_and_predict(self, points):
+        pvec = load_points(self._preprocessors, points)
+        return self._model.predict(pvec)
+
     def __call__(self, input_data):
         # Single wrapped instance, or multiple instances
         if isinstance(input_data, list):
             if len(input_data) > 1:
                 return [self(data) for data in input_data]
             else:
-                prediction = self._model.predict([input_data])
+                prediction = self.load_and_predict([input_data])
         # Single image path
         elif isinstance(input_data, str):
-            prediction = self._model.predict([[input_data]])
+            prediction = self.load_and_predict([[input_data]])
         # Pixel-valued ndarray input
         elif isinstance(input_data, np.ndarray):
-            if len(input_data.shape) == 3:
-                array = np.expand_dims(input_data, axis=0)
+            # Multiple images in single array
+            if len(input_data.shape) == 4:
+                # [row, h, w, channels]
+                return [self(img) for img in input_data]
             else:
-                array = input_data
-
-            prediction = self._model.predict(array)
-        # Something else (tf.tensor or python list)
+                prediction = self.load_and_predict([[input_data]])
         else:
-            prediction = self._model.predict(input_data)
+            dtype = str(type(input_data))
+            raise TypeError('Cannot predict on arguments of type "%s"' % dtype)
 
         if self._unfiltered:
             return prediction

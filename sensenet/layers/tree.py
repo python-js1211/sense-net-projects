@@ -82,14 +82,12 @@ class DecisionForest():
         self._noutputs = self._arrays['outputs'].shape[-1]
 
     def __call__(self, inputs):
-        outputs = tl.BigMLTreeify(points=inputs,
-                                  split_indices=self._arrays['split_indices'],
-                                  split_values=self._arrays['split_values'],
-                                  left=self._arrays['left'],
-                                  right=self._arrays['right'],
-                                  outputs=self._arrays['outputs'])
-
-        return tf.reshape(outputs, (-1, self._noutputs))
+        return tl.BigMLTreeify(points=inputs,
+                               split_indices=self._arrays['split_indices'],
+                               split_values=self._arrays['split_values'],
+                               left=self._arrays['left'],
+                               right=self._arrays['right'],
+                               outputs=self._arrays['outputs'])
 
 class ForestPreprocessor(tf.keras.layers.Layer):
     def __init__(self, **kwargs):

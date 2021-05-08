@@ -5,35 +5,30 @@ kl = sensenet.importers.import_keras_layers()
 from sensenet.accessors import get_image_shape, get_output_exposition
 from sensenet.accessors import get_image_tensor_shape
 from sensenet.constants import IMAGE_PATH, NUMERIC, CATEGORICAL
-from sensenet.constants import STRING_INPUTS, NUMERIC_INPUTS, PIXEL_INPUTS
+from sensenet.constants import NUMERIC_INPUTS, PIXEL_INPUTS
 from sensenet.layers.construct import feed_through, tree_preprocessor
-from sensenet.load import load_points
+from sensenet.load import load_points, count_types
 from sensenet.models.settings import ensure_settings
 from sensenet.preprocess.preprocessor import Preprocessor
 
 def instantiate_inputs(model, settings):
-    preprocessors = model['preprocess']
-    ptypes = [p['type'] for p in preprocessors]
+    ncols, nimages = count_types(model['preprocess'])
 
-    ncols = len(preprocessors)
-    nstrings = ptypes.count(IMAGE_PATH)
+    if nimages > 0:
+        if nimages > 1:
+            images_shape = (nimages,) + get_image_tensor_shape(settings)
+        else:
+            images_shape = get_image_tensor_shape(settings)
 
-    if ncols == 1 and settings.input_image_format == 'pixel_values':
-        assert ptypes[0] == IMAGE_PATH
-        image_shape = get_image_tensor_shape(settings)
+        im_input = kl.Input(images_shape, dtype=tf.float32, name=PIXEL_INPUTS)
 
-        return kl.Input(image_shape,
-                        dtype=tf.float32,
-                        name=PIXEL_INPUTS)
+        if nimages == ncols:
+            return im_input
+        else:
+            num_input = kl.Input((ncols,), dtype=tf.float32, name=NUMERIC_INPUTS)
+            return {NUMERIC_INPUTS: num_input, PIXEL_INPUTS: im_input}
     else:
-        return {
-            NUMERIC_INPUTS: kl.Input((ncols,),
-                                     dtype=tf.float32,
-                                     name=NUMERIC_INPUTS),
-            STRING_INPUTS: kl.Input((nstrings,),
-                                    dtype=tf.string,
-                                    name=STRING_INPUTS)
-        }
+        return kl.Input((ncols,), dtype=tf.float32, name=NUMERIC_INPUTS)
 
 def apply_layers(model, settings, inputs, treeed_inputs):
     if 'networks' in model:
