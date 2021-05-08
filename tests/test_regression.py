@@ -29,7 +29,7 @@ TEMP_WEIGHTS = os.path.join(TEST_DATA_DIR, 'test_save_weights.h5')
 TEMP_BUNDLE = os.path.join(TEST_DATA_DIR, 'test_save_bundle.smbundle')
 TEMP_TFJS = os.path.join(TEST_DATA_DIR, 'test_save_tfjs')
 
-EXTRA_PARAMS = Settings({'image_path_prefix': TEST_DATA_DIR + 'images/digits/'})
+EXTRA_PARAMS = Settings({})
 
 def remove_temp_files():
     for afile in [TEMP_WEIGHTS, TEMP_BUNDLE]:
