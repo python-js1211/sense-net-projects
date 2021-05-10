@@ -42,14 +42,14 @@ def to_image_pixels(image, shape):
             raise IndexError('Image shapes do not all match: %s', mismatch)
 
         if img_array.dtype != np.uint8:
-            if 0 <= np.min(img_array) <= 1 and 0 <= np.min(img_array) <= 1:
+            if 0 <= np.min(img_array) <= 1 and 0 <= np.max(img_array) <= 1:
                 img_array *= 255.
 
-            img_array = img_array.astype(np.uint8)
             bounds = np.min(img_array), np.max(img_array)
-
             if not all([0 <= bound < 256 for bound in bounds]):
                 raise ValueError('Bounds for image array are %s' % str(bounds))
+
+            img_array = img_array.astype(np.uint8)
 
     elif isinstance(image, str):
         if not os.path.exists(image):

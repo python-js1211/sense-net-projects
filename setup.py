@@ -48,6 +48,7 @@ setup(
     ],
     test_suite='nose.collector',
     install_requires=[
+        'importlib-resources>=5.1,<5.2',
         'numpy>=1.19,<1.20',
         'pillow>=8.2,<8.3',
         'tensorflow>=2.4,<2.5',

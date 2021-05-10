@@ -28,10 +28,6 @@ def make_mobilenet(settings):
 def check_pixels_and_file(settings, pos_threshold, neg_threshold):
     pixel_model = make_mobilenet(settings)
 
-    ibytes = tf.io.read_file(BUS_PATH)
-    iten = tf.io.decode_jpeg(ibytes, dct_method=DCT, channels=3)
-    image_pixels = iten.numpy()
-
     with Image.open(BUS_PATH) as img:
         if settings.get('color_space', '').endswith('a'):
             image_pixels = np.array(img.convert('RGBA'))
@@ -70,3 +66,23 @@ def test_cropping():
         pred_value = pred[0, BUS_INDEX]
 
         assert threshold < pred_value < threshold + 0.01, pred_value
+
+def test_ndarray():
+    pixel_model = make_mobilenet(None)
+
+    with Image.open(BUS_PATH) as img:
+        image_pixels = np.array(img)
+
+    good_float_pixels = image_pixels.astype(np.float64) / 255.
+
+    bad_float_pixels = np.array(good_float_pixels, copy=True)
+    bad_float_pixels[200, 200, 0] = 257
+
+    pred = pixel_model(good_float_pixels)
+    check_image_prediction(pred, BUS_INDEX, 0.98, 0.02)
+
+    try:
+        pixel_model(bad_float_pixels)
+        assert False, 'This "image" should throw an exception'
+    except ValueError:
+        pass
