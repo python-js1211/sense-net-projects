@@ -39,7 +39,7 @@ CROP = 'crop'
 
 # Names of network inputs
 NUMERIC_INPUTS = 'numeric_inputs'
-PIXEL_INPUTS = 'image_pixel_input'
+PIXEL_INPUTS = 'image_pixel_inputs'
 
 # Default parameters for YOLO bounding box detection
 MAX_OBJECTS = 32

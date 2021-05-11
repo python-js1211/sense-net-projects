@@ -1,13 +1,12 @@
 """Setup for package sensenet
 """
 
-tf_ver = 'tensorflow>=2.3,<2.4'
-import_err = 'Cannot import tensorflow.  Please run `pip install %s`' % tf_ver
-
 try:
     import tensorflow as tf
 except ModuleNotFoundError:
-    raise ImportError(import_err)
+    raise ImportError("Tensorflow is not in the build environment.")
+
+import pkg_resources
 
 from os import path
 from setuptools import setup, Extension, find_packages
@@ -15,6 +14,21 @@ from setuptools import setup, Extension, find_packages
 from sensenet import __version__, __tree_ext_prefix__
 
 here = path.abspath(path.dirname(__file__))
+
+deps = [
+    'importlib-resources>=5.1,<5.2',
+    'numpy>=1.19,<1.20',
+    'pillow>=8.2,<8.3',
+    'tensorflow>=2.4,<2.5',
+    'tensorflowjs>=3.4,<3.5'
+]
+
+# The installation of `tensorflow-gpu` should be specific to canonical
+# docker images distributed by the Tensorflow team.  If they've
+# installed tensorflow-gpu, we shouldn't try to install tensorflow on
+# top of them.
+if any(pkg.key == 'tensorflow-gpu' for pkg in pkg_resources.working_set):
+    deps = list(filter(lambda d: not d.startswith('tensorflow>='), deps))
 
 # Get the long description from the relevant file
 with open(path.join(here, 'README.md'), 'r') as f:
@@ -47,10 +61,4 @@ setup(
         'scikit-learn>=0.24,<0.25'
     ],
     test_suite='nose.collector',
-    install_requires=[
-        'importlib-resources>=5.1,<5.2',
-        'numpy>=1.19,<1.20',
-        'pillow>=8.2,<8.3',
-        'tensorflow>=2.4,<2.5',
-        'tensorflowjs>=3.4,<3.5'
-    ])
+    install_requires=deps)
