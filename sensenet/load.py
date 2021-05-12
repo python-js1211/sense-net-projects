@@ -63,6 +63,8 @@ def to_image_pixels(image, shape):
         else:
             with pil.Image.open(image) as img:
                 img_array = np.array(img.convert('RGB'))
+    else:
+        raise ValueError('Images cannot be type "%s"' % str(type(image)))
 
     return img_array
 

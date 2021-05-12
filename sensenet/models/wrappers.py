@@ -185,6 +185,7 @@ class ObjectDetector(SaveableModel):
             self._model = box_detector(model, settings)
             self._classes = model['output_exposition']['values']
             self._unfiltered = settings.output_unfiltered_boxes
+            self._preprocessors = model['preprocess']
         elif settings and 'output_unfiltered_boxes' in settings:
             self._unfiltered = settings['output_unfiltered_boxes']
 
@@ -193,10 +194,12 @@ class ObjectDetector(SaveableModel):
         return self._model.predict(pvec)
 
     def __call__(self, input_data):
-        # Single wrapped instance, or multiple instances
+        # Collection of file names or ndarrays
         if isinstance(input_data, list):
-            if len(input_data) > 1:
+            # Multiple instances, possibly nested
+            if isinstance(input_data[0], list) or len(input_data) > 1:
                 return [self(data) for data in input_data]
+            # We'll treat a one element list as a single instance
             else:
                 prediction = self.load_and_predict([input_data])
         # Single image path
@@ -208,8 +211,11 @@ class ObjectDetector(SaveableModel):
             if len(input_data.shape) == 4:
                 # [row, h, w, channels]
                 return [self(img) for img in input_data]
-            else:
+            elif len(input_data.shape) == 3:
                 prediction = self.load_and_predict([[input_data]])
+            else:
+                raise ValueError('Input array has len(shape) %d not in [3, 4]' %
+                                 len(input_data.shape))
         else:
             dtype = str(type(input_data))
             raise TypeError('Cannot predict on arguments of type "%s"' % dtype)

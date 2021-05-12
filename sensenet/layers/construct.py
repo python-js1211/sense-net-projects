@@ -19,7 +19,10 @@ def feed_through(layers, inputs):
     if any(layer.get('type', None) is None for layer in layers):
         graph = build_legacy_graph(layers, inputs)
     else:
-        graph = build_graph(layers, LAYER_FUNCTIONS, inputs)
+        try:
+            graph = build_graph(layers, LAYER_FUNCTIONS, inputs)
+        except:
+            raise ValueError(remove_weights(layers))
 
     return graph[-1].output
 

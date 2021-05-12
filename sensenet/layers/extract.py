@@ -184,11 +184,7 @@ def input_indices(layer_map, layer_name, index_set):
 def name_index(layers, name):
     for i, layer in enumerate(layers):
         if layer['name'] == name:
-            if 'type' in layer and layer['type'] in IGNORED_LAYERS:
-                assert len(layer['input_names']) == 1
-                return name_index(layers, layer['input_names'][0])
-            else:
-                return i
+            return i
 
     raise ValueError('%s not found in layer stack' % name)
 
@@ -216,21 +212,34 @@ def extract_one(layer_map, layer):
 
     return new_layer
 
+def filter_ignored(layers):
+    for layer in layers[1:]:
+        if len(layer['input_names']) == 1:
+            input_layer = layers[name_index(layers, layer['input_names'][0])]
+
+            if 'type' in input_layer and input_layer['type'] in IGNORED_LAYERS:
+                # Dropout layer; the previous layer is the actual input
+                assert len(input_layer['input_names']) == 1
+                layer['input_names'] = input_layer['input_names']
+
+    return list(filter(lambda l: l['type'] not in IGNORED_LAYERS, layers))
+
 def extract_layers_list(model, keras_layers):
-    layers = []
+    all_layers = []
     layer_map = make_layer_map(model)
 
     for layer in keras_layers:
         new_layer = extract_one(layer_map, layer)
-        layers.append(new_layer)
+        all_layers.append(new_layer)
 
-    for layer in layers[1:]:
-        layer['inputs'] = [name_index(layers, n) for n in layer['input_names']]
+    output_layers = filter_ignored(all_layers)
 
-    layers = list(filter(lambda l: l['type'] not in IGNORED_LAYERS, layers))
+    for layer in output_layers[1:]:
+        input_names = layer['input_names']
+        layer['inputs'] = [name_index(output_layers, n) for n in input_names]
 
-    for layer in layers:
+    for layer in output_layers:
         layer.pop('input_names')
         layer.pop('name')
 
-    return layers
+    return output_layers
