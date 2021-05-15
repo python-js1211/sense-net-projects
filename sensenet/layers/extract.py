@@ -214,13 +214,13 @@ def extract_one(layer_map, layer):
 
 def filter_ignored(layers):
     for layer in layers[1:]:
-        if len(layer['input_names']) == 1:
-            input_layer = layers[name_index(layers, layer['input_names'][0])]
+        for i, in_name in enumerate(layer['input_names']):
+            input_layer = layers[name_index(layers, in_name)]
 
             if 'type' in input_layer and input_layer['type'] in IGNORED_LAYERS:
                 # Dropout layer; the previous layer is the actual input
                 assert len(input_layer['input_names']) == 1
-                layer['input_names'] = input_layer['input_names']
+                layer['input_names'][i] = input_layer['input_names'][0]
 
     return list(filter(lambda l: l['type'] not in IGNORED_LAYERS, layers))
 
