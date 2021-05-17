@@ -141,6 +141,7 @@ LAYER_EXTRACTORS = {
     'Dense': dense,
     'DepthwiseConv2D': depthwise_conv_2d,
     'Dropout': dropout,
+    'AlphaDropout': dropout,
     'GlobalAveragePooling2D': global_avg_pool,
     'GlobalMaxPooling2D': global_max_pool,
     'Lambda': lamda,
