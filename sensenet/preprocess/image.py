@@ -106,10 +106,12 @@ def rescale(settings, target_shape, image):
     elif image.shape[-1] != 3:
         raise ValueError('Number of color channels is %d' % new_image.shape[-1])
 
+    height, width = target_shape[1], target_shape[2]
+
     if len(image.shape) == 4:
-        new_image.set_shape([None, None, None, 3])
+        new_image.set_shape([None, height, width, 3])
     elif len(image.shape) == 3:
-        new_image.set_shape([None, None, 3])
+        new_image.set_shape([height, width, 3])
     else:
         raise ValueError('Image tensor is rank %d' % len(image.shape))
 

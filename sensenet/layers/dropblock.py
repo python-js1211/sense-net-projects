@@ -8,6 +8,9 @@ class DropBlock2D(tf.keras.layers.Layer):
         assert 0 < rate < 1
 
         self._seed = seed
+        self._rate = rate
+        self._size = block_size
+
         self._keep_prob = tf.constant(1 - rate, dtype=tf.float32)
         self._block_size = tf.constant(block_size, dtype=tf.int32)
 
@@ -64,3 +67,10 @@ class DropBlock2D(tf.keras.layers.Layer):
         block_mask = tf.nn.max_pool(mask, block_shape, [1, 1, 1, 1], 'SAME')
 
         return 1 - block_mask
+
+    def get_config(self):
+        return {
+            'rate': self._rate,
+            'block_size': self._size,
+            'seed': self._seed
+        }

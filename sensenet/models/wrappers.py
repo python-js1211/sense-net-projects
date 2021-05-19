@@ -87,7 +87,7 @@ class SaveableModel(object):
                 json.dump(attributes, fout)
 
             bundle_file = write_bundle(model_path)
-            os.rename(bundle_file, out_path)
+            shutil.copy(bundle_file, out_path)
 
             if tfjs_path:
                 self.write_tfjs_files(model_path, tfjs_path)
