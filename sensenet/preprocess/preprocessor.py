@@ -2,7 +2,7 @@ import sensenet.importers
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE
-from sensenet.constants import MEAN, STANDARD_DEVIATION
+from sensenet.constants import MEAN, STANDARD_DEVIATION, ZERO, ONE
 from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
 from sensenet.load import count_types
@@ -33,9 +33,8 @@ class Preprocessor():
 
                 if MEAN in pp:
                     mean, stdev = pp[MEAN], pp[STANDARD_DEVIATION]
-                elif 'zero_value' in pp:
-                    mean = pp['zero_value']
-                    stdev = pp['one_value'] - pp['zero_value']
+                elif ZERO in pp:
+                    mean, stdev = pp[ZERO], pp[ONE] - pp[ZERO]
 
                 # This should only happen if the feature had a
                 # constant value in training (and is therefore always
