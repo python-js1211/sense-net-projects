@@ -1,4 +1,5 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.layers.block import SIMPLE_LAYERS, BLOCKS
@@ -13,10 +14,11 @@ LAYER_FUNCTIONS.update(BLOCKS)
 
 WEIGHTED_LAYERS = set()
 WEIGHTED_LAYERS.update((CONVOLUTIONAL_LAYERS.keys()))
-WEIGHTED_LAYERS.update(['dense', 'batch_normalization'])
+WEIGHTED_LAYERS.update(["dense", "batch_normalization"])
+
 
 def feed_through(layers, inputs):
-    if any(layer.get('type', None) is None for layer in layers):
+    if any(layer.get("type", None) is None for layer in layers):
         graph = build_legacy_graph(layers, inputs)
     else:
         try:
@@ -26,32 +28,35 @@ def feed_through(layers, inputs):
 
     return graph[-1].output
 
+
 def tree_preprocessor(model):
-    if model.get('trees', None):
-        return ForestPreprocessor(trees=model['trees'])
+    if model.get("trees", None):
+        return ForestPreprocessor(trees=model["trees"])
     else:
         return None
 
+
 def get_n_nodes(params):
-    if isinstance(params['weights'], str):
-        return int(params['number_of_nodes'])
-    elif 'stdev' in params:
-        return len(params['weights'])
+    if isinstance(params["weights"], str):
+        return int(params["number_of_nodes"])
+    elif "stdev" in params:
+        return len(params["weights"])
     else:
-        return len(params['weights'][0])
+        return len(params["weights"][0])
+
 
 def remove_weights(element):
     if isinstance(element, dict):
-        edict  = dict(element)
-        ltype = edict.get('type', None)
+        edict = dict(element)
+        ltype = edict.get("type", None)
 
-        if ltype in WEIGHTED_LAYERS or 'weights' in edict:
-            if ltype == 'dense' or 'weights' in edict:
-                edict['number_of_nodes'] = get_n_nodes(edict)
+        if ltype in WEIGHTED_LAYERS or "weights" in edict:
+            if ltype == "dense" or "weights" in edict:
+                edict["number_of_nodes"] = get_n_nodes(edict)
             elif ltype in CONVOLUTIONAL_LAYERS:
                 nfilters, kdims = get_shape_params(edict)
-                edict['number_of_filters'] = nfilters
-                edict['kernel_dimensions'] = kdims
+                edict["number_of_filters"] = nfilters
+                edict["kernel_dimensions"] = kdims
 
             for key in edict:
                 if key in WEIGHT_INITIALIZERS and isinstance(edict[key], list):

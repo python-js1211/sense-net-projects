@@ -1,10 +1,11 @@
 import os
 import json
 
-BYTE_ORDER = 'big' # Meaningless; we're only going to use 1 byte
-GUARD = 'bigml_tensorflow_saved_model_bundle'.encode('utf8')
+BYTE_ORDER = "big"  # Meaningless; we're only going to use 1 byte
+GUARD = "bigml_tensorflow_saved_model_bundle".encode("utf8")
 HEAD_BLOCK_SIZE = 1024
-BUNDLE_EXTENSION = '.smbundle'
+BUNDLE_EXTENSION = ".smbundle"
+
 
 def write_to_bundle(adir, is_header, fout):
     all_files = [c for c in os.walk(adir)]
@@ -23,7 +24,7 @@ def write_to_bundle(adir, is_header, fout):
             outfiles.append([afile, fsize])
 
             if not is_header:
-                with open(apath, 'rb') as fin:
+                with open(apath, "rb") as fin:
                     data = fin.read()
                     fout.write(data)
 
@@ -36,39 +37,41 @@ def write_to_bundle(adir, is_header, fout):
         nblocks = (len(head_json) // HEAD_BLOCK_SIZE) + 1
 
         if nblocks > 255:
-            raise ValueError('Header length is %d > 255 blocks' % nblocks)
+            raise ValueError("Header length is %d > 255 blocks" % nblocks)
 
         block_count = nblocks.to_bytes(1, BYTE_ORDER)
         head_len = nblocks * HEAD_BLOCK_SIZE
-        head_bytes = block_count + head_json.ljust(head_len).encode('utf8')
+        head_bytes = block_count + head_json.ljust(head_len).encode("utf8")
 
         assert len(head_bytes) == head_len + 1
 
         fout.write(GUARD)
         fout.write(head_bytes)
 
+
 def write_bundle(adir):
     assert os.path.isdir(adir)
     outpath = adir + BUNDLE_EXTENSION
 
-    with open(outpath, 'wb') as fout:
+    with open(outpath, "wb") as fout:
         write_to_bundle(adir, True, fout)
         write_to_bundle(adir, False, fout)
 
     return outpath
 
-def read_bundle(afile):
-    top_root = afile[:-len(BUNDLE_EXTENSION)]
 
-    with open(afile, 'rb') as fin:
+def read_bundle(afile):
+    top_root = afile[: -len(BUNDLE_EXTENSION)]
+
+    with open(afile, "rb") as fin:
         guard = fin.read(len(GUARD))
 
         if guard != GUARD:
-            raise ValueError('Guard bytes are %s' % guard)
+            raise ValueError("Guard bytes are %s" % guard)
 
         head_blocks = int.from_bytes(fin.read(1), BYTE_ORDER)
         head_bytes = fin.read(head_blocks * HEAD_BLOCK_SIZE)
-        header = json.loads(head_bytes.decode('utf8'))
+        header = json.loads(head_bytes.decode("utf8"))
 
         for root, dirs, files in header:
             root_path = os.path.join(top_root, root)
@@ -81,7 +84,7 @@ def read_bundle(afile):
                 apath = os.path.join(root_path, outfile)
                 data = fin.read(filebytes)
 
-                with open(apath, 'wb') as fout:
+                with open(apath, "wb") as fout:
                     fout.write(data)
 
     return top_root

@@ -1,9 +1,11 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.accessors import get_image_shape, yolo_outputs
 from sensenet.layers.construct import LAYER_FUNCTIONS
 from sensenet.layers.utils import build_graph
+
 
 def yolo_decode(features, decoding_info, input_size, nclasses):
     strides, anchors, xyscale = decoding_info
@@ -32,17 +34,18 @@ def yolo_decode(features, decoding_info, input_size, nclasses):
 
     return conv_output, tf.concat([pred_xywh, pred_conf, pred_prob], axis=-1)
 
-class Yolo():
+
+class Yolo:
     def __init__(self, network, nclasses):
         self._nclasses = nclasses
         self._input_size = get_image_shape(network)[1]
-        self._layers = network['layers']
+        self._layers = network["layers"]
 
         self._branches = []
 
         for branch in yolo_outputs(network):
-            d_info = [branch[k] for k in ['strides', 'anchors', 'xyscale']]
-            self._branches.append((branch['input'], d_info))
+            d_info = [branch[k] for k in ["strides", "anchors", "xyscale"]]
+            self._branches.append((branch["input"], d_info))
 
     def decode_outputs(self, features, d_info):
         return yolo_decode(features, d_info, self._input_size, self._nclasses)

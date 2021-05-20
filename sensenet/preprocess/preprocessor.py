@@ -1,4 +1,5 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE
@@ -9,23 +10,24 @@ from sensenet.load import count_types
 from sensenet.preprocess.categorical import CategoricalPreprocessor
 from sensenet.preprocess.image import ImagePreprocessor
 
-class Preprocessor():
+
+class Preprocessor:
     def __init__(self, model, extras):
-        if model.get('image_network', None) is not None:
-            img_proc = ImagePreprocessor(model['image_network'], extras)
+        if model.get("image_network", None) is not None:
+            img_proc = ImagePreprocessor(model["image_network"], extras)
             self._image_preprocessor = img_proc
         else:
             self._image_preprocessor = None
 
-        self._ncolumns, self._nimages = count_types(model['preprocess'])
+        self._ncolumns, self._nimages = count_types(model["preprocess"])
         self._feature_blocks = []
 
         means = []
         stdevs = []
         block_start = None
 
-        for i, pp in enumerate(model['preprocess']):
-            ptype = pp['type']
+        for i, pp in enumerate(model["preprocess"]):
+            ptype = pp["type"]
 
             if ptype == NUMERIC:
                 if block_start is None:
@@ -56,12 +58,14 @@ class Preprocessor():
                 if ptype == IMAGE:
                     self._feature_blocks.append([i, self._image_preprocessor])
                 else:
-                    self._feature_blocks.append([i, CategoricalPreprocessor(pp)])
+                    self._feature_blocks.append(
+                        [i, CategoricalPreprocessor(pp)]
+                    )
             else:
                 raise ValueError('Cannot make processor with type "%s"' % ptype)
 
         if block_start is not None:
-            self._feature_blocks.append([block_start, len(model['preprocess'])])
+            self._feature_blocks.append([block_start, len(model["preprocess"])])
 
         self._means = tf.constant(means)
         self._stdevs = tf.constant(stdevs)
@@ -90,7 +94,7 @@ class Preprocessor():
                 # This block is a bunch of numeric features that can
                 # be passed through without modification
                 start, end = block
-                processed.append(standardized_inputs[:,start:end])
+                processed.append(standardized_inputs[:, start:end])
             else:
                 # It's not a numeric feature; there's a processor
                 # associated with this column, so process it.
@@ -100,12 +104,12 @@ class Preprocessor():
                     if self._nimages == 1:
                         ith_img = pixel_inputs
                     else:
-                        ith_img = pixel_inputs[:,img_idx,:,:,:]
+                        ith_img = pixel_inputs[:, img_idx, :, :, :]
 
                     processed.append(processor(ith_img))
                     img_idx += 1
                 elif isinstance(processor, CategoricalPreprocessor):
-                    cat_idxs = tf.reshape(numeric_inputs[:,idx], (-1,))
+                    cat_idxs = tf.reshape(numeric_inputs[:, idx], (-1,))
                     processed.append(processor(cat_idxs))
 
         if len(processed) > 1:

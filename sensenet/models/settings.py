@@ -1,20 +1,21 @@
 from sensenet.constants import WARP, PAD, CROP
 
-COLOR_SPACES = ['bgr', 'rgb', 'bgra', 'rgba']
+COLOR_SPACES = ["bgr", "rgb", "bgra", "rgba"]
 COLOR_SPACES += [f.upper() for f in COLOR_SPACES]
 
 OPTIONAL = {
-    'bounding_box_threshold': [1e-8, 1.0],
-    'color_space': COLOR_SPACES,
-    'iou_threshold': [1e-8, 1.0],
-    'load_pretrained_weights': bool,
-    'max_objects': int,
-    'output_unfiltered_boxes': bool,
-    'regression_normalize': bool,
-    'rescale_type': [WARP, PAD, CROP]
+    "bounding_box_threshold": [1e-8, 1.0],
+    "color_space": COLOR_SPACES,
+    "iou_threshold": [1e-8, 1.0],
+    "load_pretrained_weights": bool,
+    "max_objects": int,
+    "output_unfiltered_boxes": bool,
+    "regression_normalize": bool,
+    "rescale_type": [WARP, PAD, CROP],
 }
 
 REQUIRED = {}
+
 
 class Settings(object):
     _required_attributes = REQUIRED
@@ -69,6 +70,7 @@ class Settings(object):
             raise AttributeError('"%s" not in settings and is required' % name)
 
         return value
+
 
 def ensure_settings(avalue):
     if type(avalue) == Settings:

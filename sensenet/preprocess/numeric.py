@@ -1,10 +1,12 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.constants import MEAN, STANDARD_DEVIATION, ZERO, ONE
 from sensenet.layers.utils import constant
 
-class NumericPreprocessor():
+
+class NumericPreprocessor:
     def __init__(self, preprocessor):
         self._moments = [preprocessor[MEAN], preprocessor[STANDARD_DEVIATION]]
 
@@ -18,6 +20,7 @@ class NumericPreprocessor():
         stdev = constant(self._moments[1])
         output = (inputs - mean) / stdev
         return tf.cast(tf.reshape(output, [-1, 1]), tf.float32)
+
 
 class BinaryPreprocessor(tf.keras.layers.Layer):
     def __init__(self, preprocessor):

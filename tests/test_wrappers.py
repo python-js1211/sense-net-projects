@@ -1,4 +1,5 @@
 import sensenet.importers
+
 np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 
@@ -15,24 +16,26 @@ from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 from .test_pretrained import check_image_prediction
 
 BUS_INDEX = 779
-BUS_PATH = os.path.join(TEST_IMAGE_DATA, 'bus.jpg')
+BUS_PATH = os.path.join(TEST_IMAGE_DATA, "bus.jpg")
 
-MOBILENET_PATH = os.path.join(TEST_DATA_DIR, 'mobilenetv2.json.gz')
+MOBILENET_PATH = os.path.join(TEST_DATA_DIR, "mobilenetv2.json.gz")
+
 
 def make_mobilenet(settings):
-    with gzip.open(MOBILENET_PATH, 'rb') as fin:
+    with gzip.open(MOBILENET_PATH, "rb") as fin:
         network = json.load(fin)
 
     return create_model(network, settings)
+
 
 def check_pixels_and_file(settings, pos_threshold, neg_threshold):
     pixel_model = make_mobilenet(settings)
 
     with Image.open(BUS_PATH) as img:
-        if settings.get('color_space', '').endswith('a'):
-            image_pixels = np.array(img.convert('RGBA'))
+        if settings.get("color_space", "").endswith("a"):
+            image_pixels = np.array(img.convert("RGBA"))
             new_settings = dict(settings)
-            new_settings['color_space'] = settings['color_space'][:3]
+            new_settings["color_space"] = settings["color_space"][:3]
             file_model = make_mobilenet(new_settings)
         else:
             image_pixels = np.array(img)
@@ -49,23 +52,26 @@ def check_pixels_and_file(settings, pos_threshold, neg_threshold):
 
     return pixel_pred
 
+
 def test_channel_order():
-    for space, pos, neg in [('rgb', 0.98, 0.02), ('bgr', 0.11, 0.5)]:
-        settings = {'color_space': space}
+    for space, pos, neg in [("rgb", 0.98, 0.02), ("bgr", 0.11, 0.5)]:
+        settings = {"color_space": space}
         no_alpha = check_pixels_and_file(settings, pos, neg)
 
-        settings = {'color_space': space + 'a'}
+        settings = {"color_space": space + "a"}
         alpha = check_pixels_and_file(settings, pos, neg)
 
         assert np.all(np.abs(alpha - no_alpha) < 1e-4)
 
+
 def test_cropping():
-    for rt, threshold in [('warp', 0.98), ('pad', 0.96), ('crop', 0.98)]:
-        settings = {'rescale_type': rt}
+    for rt, threshold in [("warp", 0.98), ("pad", 0.96), ("crop", 0.98)]:
+        settings = {"rescale_type": rt}
         pred = check_pixels_and_file(settings, threshold, 0.02)
         pred_value = pred[0, BUS_INDEX]
 
         assert threshold < pred_value < threshold + 0.01, pred_value
+
 
 def test_ndarray():
     pixel_model = make_mobilenet(None)
@@ -73,7 +79,7 @@ def test_ndarray():
     with Image.open(BUS_PATH) as img:
         image_pixels = np.array(img)
 
-    good_float_pixels = image_pixels.astype(np.float64) / 255.
+    good_float_pixels = image_pixels.astype(np.float64) / 255.0
 
     bad_float_pixels = np.array(good_float_pixels, copy=True)
     bad_float_pixels[200, 200, 0] = 257

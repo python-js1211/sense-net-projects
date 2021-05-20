@@ -1,4 +1,5 @@
 import sensenet.importers
+
 np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 
@@ -7,19 +8,22 @@ import os
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE, DCT
 from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
+
 def count_types(preprocessors):
     if preprocessors is None:
         # This should only happen for pretrained image networks
         return 1, 1
     else:
-        ptypes = [p['type'] for p in preprocessors]
+        ptypes = [p["type"] for p in preprocessors]
         return len(ptypes), ptypes.count(IMAGE)
+
 
 def list_index(alist, element):
     try:
         return float(alist.index(element))
     except ValueError:
         return -1
+
 
 def to_image_pixels(image, shape):
     if image is None:
@@ -29,44 +33,45 @@ def to_image_pixels(image, shape):
             img_array = np.expand_dims(image, -1)
             img_array = np.tile(img_array, (1, 1, 3))
         elif len(image.shape) != 3:
-            raise ValueError('Image array has shape %s' % str(image.shape))
-        elif image.shape[-1] == 1: # Grayscale
+            raise ValueError("Image array has shape %s" % str(image.shape))
+        elif image.shape[-1] == 1:  # Grayscale
             img_array = np.tile(image, (1, 1, 3))
         elif image.shape[-1] > 4:
-            raise ValueError('Number of channels is %d' % image.shape[-1])
+            raise ValueError("Number of channels is %d" % image.shape[-1])
         else:
             img_array = image
 
         if shape is not None and img_array.shape != shape:
-            mismatch = '%s != %s' % (str(img_array.shape), str(shape))
-            raise IndexError('Image shapes do not all match: %s', mismatch)
+            mismatch = "%s != %s" % (str(img_array.shape), str(shape))
+            raise IndexError("Image shapes do not all match: %s", mismatch)
 
         if img_array.dtype != np.uint8:
             if 0 <= np.min(img_array) <= 1 and 0 <= np.max(img_array) <= 1:
-                img_array *= 255.
+                img_array *= 255.0
 
             bounds = np.min(img_array), np.max(img_array)
             if not all([0 <= bound < 256 for bound in bounds]):
-                raise ValueError('Bounds for image array are %s' % str(bounds))
+                raise ValueError("Bounds for image array are %s" % str(bounds))
 
             img_array = img_array.astype(np.uint8)
 
     elif isinstance(image, str):
         if not os.path.exists(image):
-            raise ValueError('File %s not found' % image)
+            raise ValueError("File %s not found" % image)
         # Allow tensorflow to read the types it is able to read
-        elif any([image.endswith(s) for s in ['.jpg', '.jpeg', '.png']]):
+        elif any([image.endswith(s) for s in [".jpg", ".jpeg", ".png"]]):
             ibytes = tf.io.read_file(image)
             iten = tf.io.decode_jpeg(ibytes, dct_method=DCT, channels=3)
             img_array = iten.numpy()
         # Use PIL for everything else
         else:
             with pil.Image.open(image) as img:
-                img_array = np.array(img.convert('RGB'))
+                img_array = np.array(img.convert("RGB"))
     else:
         raise ValueError('Images cannot be type "%s"' % str(type(image)))
 
     return img_array
+
 
 def load_points(preprocessors, points):
     nrows = len(points)
@@ -74,21 +79,21 @@ def load_points(preprocessors, points):
 
     inputs = {
         NUMERIC_INPUTS: np.zeros((nrows, ncols), dtype=np.float32),
-        PIXEL_INPUTS: [list() for _ in range(nrows)]
+        PIXEL_INPUTS: [list() for _ in range(nrows)],
     }
 
     for i, proc in enumerate(preprocessors):
-        pidx = proc['index']
-        values = proc.get('values', None)
+        pidx = proc["index"]
+        values = proc.get("values", None)
 
-        if proc['type'] == NUMERIC:
+        if proc["type"] == NUMERIC:
             for j, p in enumerate(points):
                 inputs[NUMERIC_INPUTS][j, i] = float(p[pidx])
-        elif proc['type'] == CATEGORICAL:
-            cats = proc['values']
+        elif proc["type"] == CATEGORICAL:
+            cats = proc["values"]
             for j, p in enumerate(points):
                 inputs[NUMERIC_INPUTS][j, i] = list_index(cats, str(p[pidx]))
-        elif proc['type'] == IMAGE:
+        elif proc["type"] == IMAGE:
             ishape = None
 
             for j, p in enumerate(points):
@@ -102,7 +107,7 @@ def load_points(preprocessors, points):
                 if ishape is None:
                     ishape = img_array.shape
         else:
-            raise ValueError('Unknown processor type "%s"' % proc['type'])
+            raise ValueError('Unknown processor type "%s"' % proc["type"])
 
     if nimages > 0:
         inputs[PIXEL_INPUTS] = np.array(inputs[PIXEL_INPUTS])
@@ -111,7 +116,7 @@ def load_points(preprocessors, points):
             # row, so slice that dimension off to get [row, h, w,
             # channels] as usual
             if nimages == 1:
-                return inputs[PIXEL_INPUTS][:,0,:,:,:]
+                return inputs[PIXEL_INPUTS][:, 0, :, :, :]
             else:
                 return inputs[PIXEL_INPUTS]
         else:

@@ -16,6 +16,7 @@ from sensenet.layers.tree import DecisionForest
 
 from .utils import read_zipped_json
 
+
 def test_simple_tree_prediction():
     test_tree = [
         0,
@@ -24,14 +25,14 @@ def test_simple_tree_prediction():
             1,
             50,
             [3, 500, [[0.1, 0.2, 0.7], None], [[0.7, 0.2, 0.1], None]],
-            [0, 3, [[0.2, 0.3, 0.5], None], [[0.5, 0.3, 0.2], None]]
+            [0, 3, [[0.2, 0.3, 0.5], None], [[0.5, 0.3, 0.2], None]],
         ],
         [
             2,
             0.5,
             [4, 0.05, [[0.01, 0.02, 0.97], None], [[0.97, 0.01, 0.02], None]],
-            [2, 1, [[0.5, 0.1, 0.4], None], [[0.4, 0.5, 0.1], None]]
-        ]
+            [2, 1, [[0.5, 0.1, 0.4], None], [[0.4, 0.5, 0.1], None]],
+        ],
     ]
 
     test_points = [
@@ -42,19 +43,22 @@ def test_simple_tree_prediction():
         [5.0, 90000, 222.22, -5.0, -50.0, -42.0],
         [6.0, 10000.0, 0.5, 45.32, 0.06, -0.42],
         [4567.0, -100.0, 0.77, -50.0, 0.0, 4.2],
-        [123456.789, 100.0, 100.0, 0.0004, 99.99, -420.0]
+        [123456.789, 100.0, 100.0, 0.0004, 99.99, -420.0],
     ]
 
-    results = np.array([
-        test_tree[2][2][2][0],
-        test_tree[2][2][3][0],
-        test_tree[2][3][2][0],
-        test_tree[3][2][2][0],
-        test_tree[2][3][3][0],
-        test_tree[3][2][3][0],
-        test_tree[3][3][2][0],
-        test_tree[3][3][3][0]
-    ], dtype=np.float32)
+    results = np.array(
+        [
+            test_tree[2][2][2][0],
+            test_tree[2][2][3][0],
+            test_tree[2][3][2][0],
+            test_tree[3][2][2][0],
+            test_tree[2][3][3][0],
+            test_tree[3][2][3][0],
+            test_tree[3][3][2][0],
+            test_tree[3][3][3][0],
+        ],
+        dtype=np.float32,
+    )
 
     tree = DecisionForest([test_tree])
     preds1 = tree(constant(test_points))
@@ -62,6 +66,7 @@ def test_simple_tree_prediction():
 
     assert np.array_equal(preds1, results), str((preds1, results))
     assert np.array_equal(preds2, results)
+
 
 def load_dataset(filename):
     data = read_zipped_json(filename)
@@ -75,6 +80,7 @@ def load_dataset(filename):
     y = [cvalues.index(c) for c in classes]
 
     return np.array(X), np.array(y)
+
 
 def tree_to_list(tree, node_id):
     if tree.children_left[node_id] == sktree._tree.TREE_LEAF:
@@ -101,8 +107,9 @@ def trees_to_list(ensemble):
 
     return jensemble
 
+
 def test_predictions():
-    X, y = load_dataset('tests/data/diabetes.json.gz')
+    X, y = load_dataset("tests/data/diabetes.json.gz")
     X = X.astype(np.float32)
 
     ensemble = skens.RandomForestClassifier(n_estimators=64, random_state=0)
@@ -126,7 +133,7 @@ def test_predictions():
     mod_preds = model(points).numpy()
     tf_time = time.time() - start
 
-    sys.stdout.write('sk: %.3f / tf: %.3f ... ' % (sk_time, tf_time))
+    sys.stdout.write("sk: %.3f / tf: %.3f ... " % (sk_time, tf_time))
     sys.stdout.flush()
 
     assert mod_preds.shape == sk_preds.shape

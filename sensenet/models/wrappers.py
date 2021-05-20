@@ -1,4 +1,5 @@
 import sensenet.importers
+
 np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
 
@@ -19,17 +20,19 @@ from sensenet.models.bundle import read_bundle, write_bundle, BUNDLE_EXTENSION
 from sensenet.models.deepnet import deepnet_model
 from sensenet.models.settings import ensure_settings
 
-SETTINGS_PATH = os.path.join('assets', 'settings.json')
+SETTINGS_PATH = os.path.join("assets", "settings.json")
+
 
 @contextmanager
 def suppress_stdout():
-    with open(os.devnull, 'w') as devnull:
+    with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
         sys.stdout = devnull
         try:
             yield
         finally:
             sys.stdout = old_stdout
+
 
 class SaveableModel(object):
     def __init__(self, keras_model, settings):
@@ -55,9 +58,9 @@ class SaveableModel(object):
         import tensorflowjs as tfjs
 
         with suppress_stdout():
-            tfjs.converters.convert_tf_saved_model(model_path,
-                                                   save_path,
-                                                   skip_op_check=True)
+            tfjs.converters.convert_tf_saved_model(
+                model_path, save_path, skip_op_check=True
+            )
 
     def save_bundle(self, save_path, tfjs_path=None):
         outdir, model_name = os.path.split(save_path)
@@ -65,8 +68,9 @@ class SaveableModel(object):
         assert os.path.exists(outdir) or len(outdir) == 0
 
         if not model_name:
-            raise ValueError('Name "%s" from "%s" is invalid' %
-                             (model_name, save_path))
+            raise ValueError(
+                'Name "%s" from "%s" is invalid' % (model_name, save_path)
+            )
 
         if save_path.endswith(BUNDLE_EXTENSION):
             out_path = save_path
@@ -80,10 +84,10 @@ class SaveableModel(object):
             self.write_raw_bundle(model_path)
 
             attributes = dict(vars(self))
-            attributes.pop('_model')
-            attributes['deepnet_type'] = type(self).__name__
+            attributes.pop("_model")
+            attributes["deepnet_type"] = type(self).__name__
 
-            with open(os.path.join(model_path, SETTINGS_PATH), 'w') as fout:
+            with open(os.path.join(model_path, SETTINGS_PATH), "w") as fout:
                 json.dump(attributes, fout)
 
             bundle_file = write_bundle(model_path)
@@ -96,7 +100,7 @@ class SaveableModel(object):
         converter = tf.lite.TFLiteConverter.from_keras_model(self._model)
         tflite_model = converter.convert()
 
-        with open(save_path, 'wb') as fout:
+        with open(save_path, "wb") as fout:
             fout.write(tflite_model)
 
         return tflite_model
@@ -106,6 +110,7 @@ class SaveableModel(object):
             self.write_raw_bundle(saved_model_temp)
             self.write_tfjs_files(saved_model_temp, save_path)
 
+
 class Deepnet(SaveableModel):
     def __init__(self, model, settings):
         super().__init__(model, settings)
@@ -114,17 +119,17 @@ class Deepnet(SaveableModel):
             outex = get_output_exposition(model)
 
             try:
-                self._classes = outex['values']
+                self._classes = outex["values"]
             except KeyError:
                 self._classes = None
 
-            self._preprocessors = model['preprocess']
+            self._preprocessors = model["preprocess"]
             self._model = deepnet_model(model, settings)
 
         # Pretrained image networks should be the only thing missing
         # this `_preprocessors` attribute
-        if getattr(self, '_preprocessors', None) is None:
-            self._preprocessors = [{'type': IMAGE, 'index': 0}]
+        if getattr(self, "_preprocessors", None) is None:
+            self._preprocessors = [{"type": IMAGE, "index": 0}]
 
         self._ncolumns, self._nimages = count_types(self._preprocessors)
 
@@ -164,7 +169,7 @@ class Deepnet(SaveableModel):
                 else:
                     numeric = input_data
             else:
-                raise ValueError('Cannot use ndarray for image+features models')
+                raise ValueError("Cannot use ndarray for image+features models")
 
             return self._model.predict(array)
         # Single image path
@@ -172,10 +177,11 @@ class Deepnet(SaveableModel):
             if self._nimages == self._ncolumns == 1:
                 return self.load_and_predict([[input_data]])
             else:
-                raise ValueError('Single strings not accepted as input')
+                raise ValueError("Single strings not accepted as input")
         else:
             dtype = str(type(input_data))
             raise TypeError('Cannot predict on arguments of type "%s"' % dtype)
+
 
 class ObjectDetector(SaveableModel):
     def __init__(self, model, settings):
@@ -183,11 +189,11 @@ class ObjectDetector(SaveableModel):
 
         if isinstance(model, dict):
             self._model = box_detector(model, settings)
-            self._classes = model['output_exposition']['values']
+            self._classes = model["output_exposition"]["values"]
             self._unfiltered = settings.output_unfiltered_boxes
-            self._preprocessors = model['preprocess']
-        elif settings and 'output_unfiltered_boxes' in settings:
-            self._unfiltered = settings['output_unfiltered_boxes']
+            self._preprocessors = model["preprocess"]
+        elif settings and "output_unfiltered_boxes" in settings:
+            self._unfiltered = settings["output_unfiltered_boxes"]
 
     def load_and_predict(self, points):
         pvec = load_points(self._preprocessors, points)
@@ -214,8 +220,10 @@ class ObjectDetector(SaveableModel):
             elif len(input_data.shape) == 3:
                 prediction = self.load_and_predict([[input_data]])
             else:
-                raise ValueError('Input array has len(shape) %d not in [3, 4]' %
-                                 len(input_data.shape))
+                raise ValueError(
+                    "Input array has len(shape) %d not in [3, 4]"
+                    % len(input_data.shape)
+                )
         else:
             dtype = str(type(input_data))
             raise TypeError('Cannot predict on arguments of type "%s"' % dtype)
@@ -227,31 +235,37 @@ class ObjectDetector(SaveableModel):
             output_boxes = []
 
             for box, score, cls in zip(boxes[0], scores[0], classes[0]):
-                output_boxes.append({
-                    'box': [int(c) for c in box],
-                    'label': self._classes[int(cls)],
-                    'score': float(score)})
+                output_boxes.append(
+                    {
+                        "box": [int(c) for c in box],
+                        "label": self._classes[int(cls)],
+                        "score": float(score),
+                    }
+                )
 
             return output_boxes
 
+
 def is_deepnet(model):
     try:
-        return 'layers' in model or 'networks' in model
+        return "layers" in model or "networks" in model
     except:
         return False
 
+
 def bigml_resource(resource):
-    if 'deepnet' in resource:
-        model = resource['deepnet']
-    elif 'model' in resource:
-        model = resource['model']
+    if "deepnet" in resource:
+        model = resource["deepnet"]
+    elif "model" in resource:
+        model = resource["model"]
     else:
         model = {}
 
     try:
-        return model['network']
+        return model["network"]
     except:
         return None
+
 
 def model_from_dictionary(model_dict, settings):
     settings_object = ensure_settings(settings)
@@ -267,7 +281,8 @@ def model_from_dictionary(model_dict, settings):
         else:
             return Deepnet(model, settings_object)
     elif isinstance(model, dict):
-        raise ValueError('Model format not recognized: %s' % str(model.keys()))
+        raise ValueError("Model format not recognized: %s" % str(model.keys()))
+
 
 def model_from_bundle(bundle_file):
     bundle_name = os.path.basename(bundle_file)
@@ -281,19 +296,20 @@ def model_from_bundle(bundle_file):
         settings_path = os.path.join(model_dir, SETTINGS_PATH)
 
         if os.path.exists(settings_path):
-            with open(settings_path, 'r') as fin:
+            with open(settings_path, "r") as fin:
                 settings = json.load(fin)
         else:
             settings = None
 
-    dtype = settings['deepnet_type']
+    dtype = settings["deepnet_type"]
 
-    if dtype == 'ObjectDetector':
+    if dtype == "ObjectDetector":
         return ObjectDetector(model, settings)
-    elif dtype == 'Deepnet':
+    elif dtype == "Deepnet":
         return Deepnet(model, settings)
     else:
         raise ValueError('Invalid deepnet type: "%s"' % dtype)
+
 
 def create_model(anobject, settings=None):
     if isinstance(anobject, str):
@@ -301,14 +317,15 @@ def create_model(anobject, settings=None):
             if anobject.endswith(BUNDLE_EXTENSION):
                 return model_from_bundle(anobject)
             else:
-                with open(anobject, 'r') as fin:
+                with open(anobject, "r") as fin:
                     return model_from_dictionary(json.load(fin), settings)
         else:
-            raise IOError('File %s not found' % str(anobject))
+            raise IOError("File %s not found" % str(anobject))
     elif isinstance(anobject, dict):
         return model_from_dictionary(anobject, settings)
     else:
-        raise TypeError('Input argument cannot be a %s' % str(type(anobject)))
+        raise TypeError("Input argument cannot be a %s" % str(type(anobject)))
+
 
 def convert(model, settings, output_path, to_format):
     """Convert some structure describing a wrapped model to a given output
@@ -340,13 +357,13 @@ def convert(model, settings, output_path, to_format):
         model_settings = ensure_settings(settings)
         model_object = create_model(model, settings=model_settings)
 
-    if to_format == 'tflite':
+    if to_format == "tflite":
         model_object.save_tflite(output_path)
-    elif to_format == 'tfjs':
+    elif to_format == "tfjs":
         model_object.save_tfjs(output_path)
-    elif to_format == 'smbundle':
+    elif to_format == "smbundle":
         model_object.save_bundle(output_path)
-    elif to_format == 'h5':
+    elif to_format == "h5":
         model_object.save_weights(output_path)
     else:
         raise ValueError('Format "%s" unknown' % str(to_format))

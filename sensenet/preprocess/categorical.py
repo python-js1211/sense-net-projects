@@ -1,11 +1,13 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 
 from sensenet.layers.utils import constant
 
-class CategoricalPreprocessor():
+
+class CategoricalPreprocessor:
     def __init__(self, preprocessor):
-        self._values = preprocessor['values']
+        self._values = preprocessor["values"]
 
     def __call__(self, inputs):
         indices = tf.range(len(self._values), dtype=tf.int32)

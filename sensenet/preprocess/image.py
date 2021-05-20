@@ -1,6 +1,7 @@
 import os
 
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
 kl = sensenet.importers.import_keras_layers()
 
@@ -29,11 +30,13 @@ def adjust_contrast(image):
 
     return tf.image.adjust_contrast(image, adjustment)
 
+
 def path_prefix(prefix):
     if prefix:
         return prefix + os.sep
     else:
-        return ''
+        return ""
+
 
 def scale_for_box(input_dims, target_dims, minimum):
     y_scale = target_dims[0] / input_dims[0]
@@ -43,6 +46,7 @@ def scale_for_box(input_dims, target_dims, minimum):
         return tf.math.minimum(x_scale, y_scale)
     else:
         return tf.math.maximum(x_scale, y_scale)
+
 
 def resize_with_crop_or_pad(settings, target_dims, image):
     pad_only = settings.rescale_type == PAD
@@ -58,7 +62,7 @@ def resize_with_crop_or_pad(settings, target_dims, image):
     box_scale = scale_for_box(in_dims, out_dims, pad_only)
     scaled_dims = in_dims * box_scale
     int_dims = tf.cast(tf.math.round(scaled_dims), tf.int32)
-    scaled = tf.image.resize(image, int_dims, method='nearest')
+    scaled = tf.image.resize(image, int_dims, method="nearest")
 
     if pad_only:
         pad_h = [0, out_dims[0] - scaled_dims[0]]
@@ -80,31 +84,32 @@ def resize_with_crop_or_pad(settings, target_dims, image):
         wend = wbeg + tf.cast(width, tf.int32)
 
         if len(image.shape) == 3:
-            return scaled[hbeg:hend,wbeg:wend,:]
+            return scaled[hbeg:hend, wbeg:wend, :]
         elif len(image.shape) == 4:
-            return scaled[:,hbeg:hend,wbeg:wend,:]
+            return scaled[:, hbeg:hend, wbeg:wend, :]
         else:
-            raise ValueError('Image tensor is rank %d' % len(image.shape))
+            raise ValueError("Image tensor is rank %d" % len(image.shape))
+
 
 def rescale(settings, target_shape, image):
     target_dims = tf.constant(target_shape[1:3], tf.int32)
 
     if settings.rescale_type is None or settings.rescale_type == WARP:
-        new_image = tf.image.resize(image, target_dims, method='nearest')
+        new_image = tf.image.resize(image, target_dims, method="nearest")
     elif settings.rescale_type in [PAD, CROP]:
         new_image = resize_with_crop_or_pad(settings, target_dims, image)
     else:
-        raise ValueError('Rescale type %s unknown' % settings.rescale_type)
+        raise ValueError("Rescale type %s unknown" % settings.rescale_type)
 
     if image.shape[-1] == 4:
         if len(image.shape) == 4:
-            new_image = new_image[:,:,:,:3]
+            new_image = new_image[:, :, :, :3]
         elif len(image.shape) == 3:
-            new_image = new_image[:,:,:3]
+            new_image = new_image[:, :, :3]
         else:
-            raise ValueError('Image tensor is rank %d' % len(image.shape))
+            raise ValueError("Image tensor is rank %d" % len(image.shape))
     elif image.shape[-1] != 3:
-        raise ValueError('Number of color channels is %d' % new_image.shape[-1])
+        raise ValueError("Number of color channels is %d" % new_image.shape[-1])
 
     height, width = target_shape[1], target_shape[2]
 
@@ -113,12 +118,13 @@ def rescale(settings, target_shape, image):
     elif len(image.shape) == 3:
         new_image.set_shape([height, width, 3])
     else:
-        raise ValueError('Image tensor is rank %d' % len(image.shape))
+        raise ValueError("Image tensor is rank %d" % len(image.shape))
 
-    if settings.color_space and settings.color_space.lower().startswith('bgr'):
+    if settings.color_space and settings.color_space.lower().startswith("bgr"):
         return tf.reverse(new_image, axis=[-1])
     else:
         return new_image
+
 
 def make_image_reader(input_format, target_shape, file_prefix, read_settings):
     settings = ensure_settings(read_settings)
@@ -127,10 +133,10 @@ def make_image_reader(input_format, target_shape, file_prefix, read_settings):
     prefix = path_prefix(file_prefix)
 
     def read_image(path_or_bytes):
-        if input_format == 'pixel_values':
+        if input_format == "pixel_values":
             raw = path_or_bytes
         else:
-            if input_format == 'image_bytes':
+            if input_format == "image_bytes":
                 img_bytes = path_or_bytes
             else:
                 path = tf.strings.join([prefix, path_or_bytes])
@@ -142,20 +148,22 @@ def make_image_reader(input_format, target_shape, file_prefix, read_settings):
 
     return read_image
 
-class ImageReader():
+
+class ImageReader:
     def __init__(self, network, settings):
         self._settings = settings
         self._input_shape = get_image_shape(network)
 
         if self._settings.rescale_type is None:
-            net_meta = network['metadata']
-            self._settings.rescale_type = net_meta.get('rescale_type', WARP)
+            net_meta = network["metadata"]
+            self._settings.rescale_type = net_meta.get("rescale_type", WARP)
 
     def __call__(self, inputs):
         dims = tf.constant(self._input_shape[1:3], tf.int32)
         images = rescale(self._settings, self._input_shape, inputs)
 
         return tf.cast(images, tf.float32)
+
 
 class BoundingBoxImageReader(ImageReader):
     def __init__(self, network, settings):
@@ -169,15 +177,16 @@ class BoundingBoxImageReader(ImageReader):
 
         return tf.cast(image, tf.float32), original_dims
 
-class ImageLoader():
+
+class ImageLoader:
     def __init__(self, network):
-        metadata = network['metadata']
-        method = metadata['loading_method']
-        mimg = metadata.get('mean_image', None)
+        metadata = network["metadata"]
+        method = metadata["loading_method"]
+        mimg = metadata.get("mean_image", None)
 
         mean, std = IMAGE_STANDARDIZERS[method]
 
-        self._reverse = method == 'channelwise_centering'
+        self._reverse = method == "channelwise_centering"
         self._mean = constant(mean) if mean != 0 else None
         self._stdev = constant(std) if std != 1 else None
         self._mean_image = constant(mimg) if mimg is not None else None
@@ -199,11 +208,12 @@ class ImageLoader():
 
         return images
 
-class ImagePreprocessor():
+
+class ImagePreprocessor:
     def __init__(self, image_network, settings):
         self._reader = ImageReader(image_network, settings)
         self._loader = ImageLoader(image_network)
-        self._image_layers = image_network['layers']
+        self._image_layers = image_network["layers"]
 
     def __call__(self, inputs):
         raw_images = self._reader(inputs)

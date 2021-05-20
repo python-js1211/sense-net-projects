@@ -1,5 +1,7 @@
 import sensenet.importers
+
 tf = sensenet.importers.import_tensorflow()
+
 
 class DropBlock2D(tf.keras.layers.Layer):
     def __init__(self, rate=0.5, block_size=5, seed=42, **kwargs):
@@ -31,7 +33,7 @@ class DropBlock2D(tf.keras.layers.Layer):
         self._padding = [[0, 0], [p0, p1], [p0, p1], [0, 0]]
 
         w, h, block = float(self._w), float(self._h), float(self._block_size)
-        num = (1. - self._keep_prob) * (w * h) / (block ** 2)
+        num = (1.0 - self._keep_prob) * (w * h) / (block ** 2)
         denom = (w - block + 1) * (h - block + 1)
 
         self._gamma = num / denom
@@ -54,23 +56,27 @@ class DropBlock2D(tf.keras.layers.Layer):
         return tf.cond(is_test, true_fn=lambda: inputs, false_fn=drop)
 
     def create_mask(self, input_shape):
-        mask_shape = tf.stack([input_shape[0],
-                               self._h - self._block_size + 1,
-                               self._w - self._block_size + 1,
-                               self._channel])
+        mask_shape = tf.stack(
+            [
+                input_shape[0],
+                self._h - self._block_size + 1,
+                self._w - self._block_size + 1,
+                self._channel,
+            ]
+        )
 
         samp = tf.random.uniform(mask_shape, dtype=tf.float32, seed=self._seed)
         bernoulli_sample = tf.nn.relu(tf.sign(self._gamma - samp))
 
         mask = tf.pad(bernoulli_sample, self._padding)
         block_shape = [1, self._block_size, self._block_size, 1]
-        block_mask = tf.nn.max_pool(mask, block_shape, [1, 1, 1, 1], 'SAME')
+        block_mask = tf.nn.max_pool(mask, block_shape, [1, 1, 1, 1], "SAME")
 
         return 1 - block_mask
 
     def get_config(self):
         return {
-            'rate': self._rate,
-            'block_size': self._size,
-            'seed': self._seed
+            "rate": self._rate,
+            "block_size": self._size,
+            "seed": self._seed,
         }
