@@ -258,6 +258,8 @@ def bigml_resource(resource):
         model = resource["deepnet"]
     elif "model" in resource:
         model = resource["model"]
+    elif "network" in resource:
+        model = resource
     else:
         model = {}
 
