@@ -273,7 +273,7 @@ def model_from_dictionary(model_dict, settings):
     settings_object = ensure_settings(settings)
 
     if bigml_resource(model_dict):
-        model = bigml_resource(model)
+        model = bigml_resource(model_dict)
     else:
         model = model_dict
 
