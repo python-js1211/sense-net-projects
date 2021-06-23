@@ -141,12 +141,15 @@ class Deepnet(SaveableModel):
         # TODO:  We should probably add assertions or something here
         # to make sure we're getting at least the right number of inputs
         if isinstance(input_data, list):
-            if isinstance(input_data[0], (float, int, str)):
+            if isinstance(input_data[0], (float, int, str, type(None))):
                 # Single unwrapped instance
                 return self.load_and_predict([input_data])
-            else:
+            elif isinstance(input_data[0], list):
                 # Properly wrapped instance
                 return self.load_and_predict(input_data)
+            else:
+                raise ValueError('input_data[0] has type "%s"' %
+                                 str(type(input_data[0])))
         elif isinstance(input_data, np.ndarray):
             # Pixel-valued ndarray input image; will only work for
             # single images

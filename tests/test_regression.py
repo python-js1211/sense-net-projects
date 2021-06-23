@@ -129,6 +129,12 @@ def validate_predictions(test_artifact):
         assert np.allclose(mod_pred[0], true_pred, atol=1e-7), outstr
         assert np.allclose(legacy_pred[0], true_pred, atol=1e-7), legstr
 
+    none_point = list(ins[0])
+    none_point[0] = None
+
+    model(none_point)
+    remodel(none_point)
+
     # start = time.time()
     compare_predictions(model, ins, outs)
     # print('model preds: %.2f' % (time.time() - start))
@@ -160,7 +166,7 @@ def test_legacy_networks():
 
 
 def test_one():
-    single_artifact(SIMPLE, 1)
+    single_artifact(SIMPLE, 0)
 
 
 def fake_outex(test_info):

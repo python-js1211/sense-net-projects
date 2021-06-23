@@ -5,7 +5,7 @@ tf = sensenet.importers.import_tensorflow()
 
 import os
 
-from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE, DCT
+from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE, DCT, MEAN
 from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
 
@@ -88,7 +88,10 @@ def load_points(preprocessors, points):
 
         if proc["type"] == NUMERIC:
             for j, p in enumerate(points):
-                inputs[NUMERIC_INPUTS][j, i] = float(p[pidx])
+                if p[pidx] is None:
+                    inputs[NUMERIC_INPUTS][j, i] = proc[MEAN]
+                else:
+                    inputs[NUMERIC_INPUTS][j, i] = float(p[pidx])
         elif proc["type"] == CATEGORICAL:
             cats = proc["values"]
             for j, p in enumerate(points):
