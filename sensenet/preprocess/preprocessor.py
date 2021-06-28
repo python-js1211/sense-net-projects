@@ -67,8 +67,8 @@ class Preprocessor:
         if block_start is not None:
             self._feature_blocks.append([block_start, len(model["preprocess"])])
 
-        self._means = tf.constant(means)
-        self._stdevs = tf.constant(stdevs)
+        self._means = tf.constant(means, dtype=tf.float32)
+        self._stdevs = tf.constant(stdevs, dtype=tf.float32)
 
     def __call__(self, inputs):
         img_idx = 0

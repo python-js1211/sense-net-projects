@@ -16,9 +16,10 @@ from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 from .test_pretrained import check_image_prediction
 
 BUS_INDEX = 779
-BUS_PATH = os.path.join(TEST_IMAGE_DATA, "bus.jpg")
 
+BUS_PATH = os.path.join(TEST_IMAGE_DATA, "bus.jpg")
 MOBILENET_PATH = os.path.join(TEST_DATA_DIR, "mobilenetv2.json.gz")
+TEXT_MODEL_PATH = os.path.join(TEST_DATA_DIR, "text_model.json.gz")
 
 
 def make_mobilenet(settings):
@@ -92,3 +93,10 @@ def test_ndarray():
         assert False, 'This "image" should throw an exception'
     except ValueError:
         pass
+
+def test_text():
+    with gzip.open(TEXT_MODEL_PATH, "rb") as fin:
+        network = json.load(fin)
+
+    text_model = create_model(network)
+    assert text_model._model is not None
