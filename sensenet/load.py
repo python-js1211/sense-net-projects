@@ -113,16 +113,18 @@ def load_points(preprocessors, points):
             raise ValueError('Unknown processor type "%s"' % proc["type"])
 
     if nimages > 0:
-        inputs[PIXEL_INPUTS] = np.array(inputs[PIXEL_INPUTS])
-        if nimages == ncols:
+        pixel_inputs = np.array(inputs[PIXEL_INPUTS])
+
+        if nimages == 1:
             # These models are guaranteed to only have one image per
             # row, so slice that dimension off to get [row, h, w,
             # channels] as usual
-            if nimages == 1:
-                return inputs[PIXEL_INPUTS][:, 0, :, :, :]
-            else:
-                return inputs[PIXEL_INPUTS]
+            pixel_inputs = pixel_inputs[:, 0, :, :, :]
+
+        if nimages == ncols:
+            return pixel_inputs
         else:
+            inputs[PIXEL_INPUTS] = pixel_inputs
             return inputs
     else:
         return inputs[NUMERIC_INPUTS]

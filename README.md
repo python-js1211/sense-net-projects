@@ -51,7 +51,7 @@ settings which may contain:
   will have the effect of more (possibly spurious) boxes identified in
   each input image.
 
-- `color_space`: A string which is One of `['rgb', 'rgba', 'bgr',
+- `color_space`: A string which is one of `['rgb', 'rgba', 'bgr',
   'bgra']`.  The first three letters give the order of the color
   channels (red, blue, and green) in the input tensors that will be
   passed to the model.  The final presence or absence of an `'a'`
@@ -68,13 +68,6 @@ settings which may contain:
   images are to be found for image predictions.  When an image path is
   passed at prediction time, this string is prepended to the given
   path.
-
-- `input_image_format`: The format of input images for the network.
-  This can be either an image file on disk (`'file'`, the default), a
-  string containing the raw, undecoded, image file bytes (`'bytes'`)
-  or the decompressed image data represented as a nested python list,
-  numpy array, or TensorFlow tensor of pixel values
-  (`'pixel_values'`).
 
 - `iou_threshold`: A threshold indicating the amount of overlap boxes
   predicting the same class should have before they are considered to

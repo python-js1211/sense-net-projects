@@ -30,6 +30,7 @@ def instantiate_inputs(model, settings):
             num_input = kl.Input(
                 (ncols,), dtype=tf.float32, name=NUMERIC_INPUTS
             )
+
             return {NUMERIC_INPUTS: num_input, PIXEL_INPUTS: im_input}
     else:
         return kl.Input((ncols,), dtype=tf.float32, name=NUMERIC_INPUTS)
