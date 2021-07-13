@@ -148,8 +148,9 @@ class Deepnet(SaveableModel):
                 # Properly wrapped instance
                 return self.load_and_predict(input_data)
             else:
-                raise ValueError('input_data[0] has type "%s"' %
-                                 str(type(input_data[0])))
+                raise ValueError(
+                    'input_data[0] has type "%s"' % str(type(input_data[0]))
+                )
         elif isinstance(input_data, np.ndarray):
             # Pixel-valued ndarray input image; will only work for
             # single images

@@ -95,12 +95,14 @@ def test_ndarray():
     except ValueError:
         pass
 
+
 def test_text():
     with gzip.open(TEXT_MODEL_PATH, "rb") as fin:
         network = json.load(fin)
 
     text_model = create_model(network)
     assert text_model._model is not None
+
 
 def test_image_plus_categorical():
     with gzip.open(TWO_FIELD_MODEL_PATH, "rb") as fin:
