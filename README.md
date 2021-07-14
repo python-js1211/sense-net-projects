@@ -40,8 +40,14 @@ model = create_model(a_dict, settings={'image_path_prefix': 'images/path/'})
 Again, `a_dict` is typically a downloaded BigML model, read into a
 python dictionary via `json.load` or similar.
 
-For image models, `settings` is either `None` or a dict of optional
-settings which may contain:
+You may also pass the path to a file containing such a model:
+
+```
+model = create_model('model.json', settings=None)
+```
+
+For image models, `settings` is either `None` (the default) or a dict
+of optional settings which may contain:
 
 ### Settings Arguments
 
