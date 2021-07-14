@@ -15,16 +15,20 @@ jobs:
         python: [3.8]
     env:
         TF_CPP_MIN_LOG_LEVEL: 2
+
     steps:
-    - name: Install packages
+    - name: Checkout repo
       uses: actions/checkout@v2
-      with:
-        ref: actions
-    - run: |
+
+    - name: Install test dependencies
+      run: |
         pip install nose
-        pip install "pillow>=7.2,<7.3"
         pip install "scikit-learn>=0.23,<0.24"
+
+    - name: Install sensenet
+      run: |
         pip install .
+
     - name: Run sensenet tests
       run: |
         nosetests -sv
