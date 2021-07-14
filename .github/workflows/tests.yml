@@ -1,0 +1,31 @@
+name: "Sensenet Tests"
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  sensenet-test:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.8]
+    env:
+        TF_CPP_MIN_LOG_LEVEL=2
+
+    steps:
+    - name: Install packages
+      uses: actions/checkout@v2
+      with:
+        ref: actions
+    - run: |
+        pip install nose
+        pip install "pillow>=7.2,<7.3"
+        pip install "scikit-learn>=0.23,<0.24"
+        pip install .
+    - name: Run sensenet tests
+      run: |
+        nosetests -sv
