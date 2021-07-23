@@ -6,10 +6,12 @@ def add(config, layer):
 
 
 def activation(config, layer):
-    return {
-        "type": "activation",
-        "activation_function": layer.activation.__name__,
-    }
+    if config["class_name"] == "ReLU":
+        afn = "relu"
+    else:
+        afn = layer.activation.__name__
+
+    return {"type": "activation", "activation_function": afn}
 
 
 def batchnorm(config, layer):
@@ -160,6 +162,7 @@ LAYER_EXTRACTORS = {
     "Lambda": lamda,
     "MaxPooling2D": max_pool,
     "SeparableConv2D": separable_conv_2d,
+    "ReLU": activation,
     "UpSampling2D": upsample,
     "ZeroPadding2D": zero_pad,
 }
