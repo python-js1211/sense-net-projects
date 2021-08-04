@@ -6,7 +6,7 @@ def add(config, layer):
 
 
 def activation(config, layer):
-    if config["class_name"] == "ReLU":
+    if "negative_slope" in config and "max_value" in config:  # ReLU layer
         afn = "relu"
     else:
         afn = layer.activation.__name__
