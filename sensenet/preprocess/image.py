@@ -65,8 +65,8 @@ def resize_with_crop_or_pad(settings, target_dims, image):
     scaled = tf.image.resize(image, int_dims, method="nearest")
 
     if pad_only:
-        pad_h = [0, out_dims[0] - scaled_dims[0]]
-        pad_w = [0, out_dims[1] - scaled_dims[1]]
+        pad_h = [0, target_dims[0] - int_dims[0]]
+        pad_w = [0, target_dims[1] - int_dims[1]]
 
         if len(image.shape) == 3:
             pad = [pad_h, pad_w, [0, 0]]

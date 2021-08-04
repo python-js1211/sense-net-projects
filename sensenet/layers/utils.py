@@ -53,9 +53,11 @@ INITIALIZERS = {
 }
 
 
-def log_summary(x, msg):
+def log_summary(x, message):
     def summary_function(x):
-        summary = [tf.shape(x), tf.reduce_mean(x), tf.math.reduce_std(x)]
+        xf = tf.cast(x, tf.float32)
+        msg = message + ": "
+        summary = [tf.shape(x), tf.reduce_mean(xf), tf.math.reduce_std(xf)]
         return tf.compat.v1.Print(x, summary, summarize=1024, message=msg)
 
     return kl.Lambda(summary_function)(x)
