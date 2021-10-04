@@ -105,6 +105,7 @@ def test_text():
     text_model = create_model(network)
     assert text_model._model is not None
 
+
 def test_image_plus_categorical():
     with gzip.open(TWO_FIELD_MODEL_PATH, "rb") as fin:
         network = json.load(fin)
@@ -115,6 +116,7 @@ def test_image_plus_categorical():
     assert 0 < model([BUS_PATH, "f1"])[0][0] < 10
     assert 0 < model([BUS_PATH, None])[0][0] < 10
     assert 0 < model([None, None])[0][0] < 10
+
 
 def test_tiff_image():
     img = to_image_pixels(TIFF_PATH, None)

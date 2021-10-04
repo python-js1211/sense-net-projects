@@ -61,7 +61,9 @@ def to_image_pixels(image, shape):
         if not os.path.exists(image):
             raise ValueError("File %s not found" % image)
         # Allow tensorflow to read the types it is able to read
-        elif any([image.lower().endswith(s) for s in [".jpg", ".jpeg", ".png"]]):
+        elif any(
+            [image.lower().endswith(s) for s in [".jpg", ".jpeg", ".png"]]
+        ):
             ibytes = tf.io.read_file(image)
             iten = tf.io.decode_jpeg(ibytes, dct_method=DCT, channels=3)
             img_array = iten.numpy()
