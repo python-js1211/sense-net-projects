@@ -10,6 +10,7 @@ import gzip
 from PIL import Image
 
 from sensenet.constants import DCT
+from sensenet.load import to_image_pixels
 from sensenet.models.wrappers import create_model
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
@@ -18,6 +19,7 @@ from .test_pretrained import check_image_prediction
 BUS_INDEX = 779
 
 BUS_PATH = os.path.join(TEST_IMAGE_DATA, "bus.jpg")
+TIFF_PATH = os.path.join(TEST_IMAGE_DATA, "dog.tiff")
 MOBILENET_PATH = os.path.join(TEST_DATA_DIR, "mobilenetv2.json.gz")
 TEXT_MODEL_PATH = os.path.join(TEST_DATA_DIR, "text_model.json.gz")
 TWO_FIELD_MODEL_PATH = os.path.join(TEST_DATA_DIR, "image_and_category.json.gz")
@@ -103,7 +105,6 @@ def test_text():
     text_model = create_model(network)
     assert text_model._model is not None
 
-
 def test_image_plus_categorical():
     with gzip.open(TWO_FIELD_MODEL_PATH, "rb") as fin:
         network = json.load(fin)
@@ -114,3 +115,8 @@ def test_image_plus_categorical():
     assert 0 < model([BUS_PATH, "f1"])[0][0] < 10
     assert 0 < model([BUS_PATH, None])[0][0] < 10
     assert 0 < model([None, None])[0][0] < 10
+
+def test_tiff_image():
+    img = to_image_pixels(TIFF_PATH, None)
+    assert type(img) == np.ndarray
+    assert img.shape == (600, 800, 3)
