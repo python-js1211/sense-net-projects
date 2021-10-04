@@ -10,6 +10,8 @@ from PIL import Image
 from sensenet.constants import NUMERIC, CATEGORICAL, IMAGE, DCT, MEAN
 from sensenet.constants import PIXEL_INPUTS, NUMERIC_INPUTS
 
+TF_IMAGE_TYPES = [".jpg", ".jpeg", ".png"]
+
 
 def count_types(preprocessors):
     if preprocessors is None:
@@ -61,9 +63,7 @@ def to_image_pixels(image, shape):
         if not os.path.exists(image):
             raise ValueError("File %s not found" % image)
         # Allow tensorflow to read the types it is able to read
-        elif any(
-            [image.lower().endswith(s) for s in [".jpg", ".jpeg", ".png"]]
-        ):
+        elif any([image.lower().endswith(s) for s in TF_IMAGE_TYPES]):
             ibytes = tf.io.read_file(image)
             iten = tf.io.decode_jpeg(ibytes, dct_method=DCT, channels=3)
             img_array = iten.numpy()
