@@ -23,6 +23,7 @@ from sensenet.models.settings import ensure_settings
 
 SETTINGS_PATH = os.path.join("assets", "settings.json")
 
+
 @contextmanager
 def suppress_stdout():
     with open(os.devnull, "w") as devnull:

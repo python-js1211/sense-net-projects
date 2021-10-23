@@ -100,7 +100,7 @@ class BoxLocator:
                 max_output_size=self._max_objects,
                 iou_threshold=self._iou_threshold,
                 score_threshold=self._threshold,
-                pad_to_max_output_size=True
+                pad_to_max_output_size=True,
             )
 
             selected_indices = box_indices[:num_valid]
