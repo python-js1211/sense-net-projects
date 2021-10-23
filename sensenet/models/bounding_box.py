@@ -94,13 +94,16 @@ class BoxLocator:
             selected_scores = max_box_scores
             selected_classes = classes
         else:
-            selected_indices, num_valid = tf.image.non_max_suppression_padded(
+            box_indices, num_valid = tf.image.non_max_suppression_padded(
                 boxes=scaled_boxes,
                 scores=max_box_scores,
                 max_output_size=self._max_objects,
                 iou_threshold=self._iou_threshold,
                 score_threshold=self._threshold,
+                pad_to_max_output_size=True
             )
+
+            selected_indices = box_indices[:num_valid]
 
             selected_boxes = tf.gather(scaled_boxes, selected_indices)
             selected_scores = tf.gather(max_box_scores, selected_indices)

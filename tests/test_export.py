@@ -8,7 +8,8 @@ import shutil
 
 from PIL import Image
 
-from sensenet.models.wrappers import convert, Deepnet, ObjectDetector
+from sensenet.models.wrappers import Deepnet, ObjectDetector
+from sensenet.models.wrappers import convert, tflite_predict
 
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 from .test_pretrained import create_image_model
@@ -29,34 +30,18 @@ def make_detector(network_name, unfiltered):
     return ObjectDetector(model, filtering)
 
 
-def tflite_predict(model, len_inputs, len_outputs, test_file):
+def convert_and_predict(model, test_file):
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
     os.makedirs(TEST_SAVE_MODEL)
 
     convert(model, None, TEST_TF_LITE_MODEL, "tflite")
-    img = Image.open(os.path.join(TEST_IMAGE_DATA, test_file))
-    in_shape = [1] + list(img.size)[::-1] + [3]
+    img_path = os.path.join(TEST_IMAGE_DATA, test_file)
 
-    interpreter = tf.lite.Interpreter(model_path=TEST_TF_LITE_MODEL)
-    interpreter.resize_tensor_input(0, in_shape, strict=True)
-    interpreter.allocate_tensors()
-
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-
-    assert len(input_details) == len_inputs
-    assert len(output_details) == len_outputs
-
-    input_data = np.expand_dims(img.convert("RGB"), axis=0).astype(np.float32)
-
-    interpreter.set_tensor(input_details[0]["index"], input_data)
-    interpreter.invoke()
-
-    return [interpreter.get_tensor(od["index"]) for od in output_details]
+    return tflite_predict(TEST_TF_LITE_MODEL, img_path)
 
 
 def test_tflite_deepnet():
-    probs = tflite_predict(make_classifier("mobilenetv2"), 1, 1, "dog.jpg")
+    probs = convert_and_predict(make_classifier("mobilenetv2"), "dog.jpg")
 
     assert len(probs) == 1
     assert probs[0].shape == (1, 1000), probs[0].shape
@@ -69,7 +54,7 @@ def test_tflite_deepnet():
 
 def test_tflite_boxes():
     detector = make_detector("tinyyolov4", True)
-    boxes, scores, classes = tflite_predict(detector, 1, 3, "strange_car.png")
+    boxes, scores, classes = convert_and_predict(detector, "strange_car.png")
 
     assert boxes.shape == (1, 2535, 4), boxes.shape
     assert classes.shape == (1, 2535), classes.shape

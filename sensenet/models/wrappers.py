@@ -10,6 +10,7 @@ import tempfile
 import sys
 
 from contextlib import contextmanager
+from PIL import Image
 
 from sensenet.constants import NUMERIC_INPUTS, IMAGE
 
@@ -21,7 +22,6 @@ from sensenet.models.deepnet import deepnet_model
 from sensenet.models.settings import ensure_settings
 
 SETTINGS_PATH = os.path.join("assets", "settings.json")
-
 
 @contextmanager
 def suppress_stdout():
@@ -373,3 +373,22 @@ def convert(model, settings, output_path, to_format):
         model_object.save_weights(output_path)
     else:
         raise ValueError('Format "%s" unknown' % str(to_format))
+
+
+def tflite_predict(tflite_model, image_file):
+    img = Image.open(image_file)
+    in_shape = [1] + list(img.size)[::-1] + [3]
+
+    interpreter = tf.lite.Interpreter(model_path=tflite_model)
+    interpreter.resize_tensor_input(0, in_shape, strict=True)
+    interpreter.allocate_tensors()
+
+    input_details = interpreter.get_input_details()
+    input_data = np.expand_dims(img.convert("RGB"), axis=0).astype(np.float32)
+
+    interpreter.set_tensor(input_details[0]["index"], input_data)
+    interpreter.invoke()
+
+    output_details = interpreter.get_output_details()
+
+    return [interpreter.get_tensor(od["index"]) for od in output_details]
