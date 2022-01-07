@@ -20,6 +20,7 @@ BUS_INDEX = 779
 
 BUS_PATH = os.path.join(TEST_IMAGE_DATA, "bus.jpg")
 TIFF_PATH = os.path.join(TEST_IMAGE_DATA, "dog.tiff")
+TINYYOLO_MODEL_PATH = os.path.join(TEST_DATA_DIR, "test_model.json.gz")
 MOBILENET_PATH = os.path.join(TEST_DATA_DIR, "mobilenetv2.json.gz")
 TEXT_MODEL_PATH = os.path.join(TEST_DATA_DIR, "text_model.json.gz")
 TWO_FIELD_MODEL_PATH = os.path.join(TEST_DATA_DIR, "image_and_category.json.gz")
@@ -116,6 +117,19 @@ def test_image_plus_categorical():
     assert 0 < model([BUS_PATH, "f1"])[0][0] < 10
     assert 0 < model([BUS_PATH, None])[0][0] < 10
     assert 0 < model([None, None])[0][0] < 10
+
+
+def test_detect():
+    with gzip.open(TINYYOLO_MODEL_PATH, "rb") as fin:
+        network = json.load(fin)
+
+    model = create_model(network)
+    image_path = os.path.join(TEST_IMAGE_DATA, "tolls.jpg")
+
+    with Image.open(image_path) as img:
+        image_pixels = np.array(img)
+
+    assert len(model(image_pixels)) == 0
 
 
 def test_tiff_image():

@@ -27,6 +27,7 @@ class BoxLocator:
         self._nanchors = tuple([len(b["anchors"]) for b in ob])
 
         self._unfiltered = settings.output_unfiltered_boxes
+        self._padded_output = settings.pad_bounding_box_output
         self._threshold = settings.bounding_box_threshold or SCORE_THRESHOLD
         self._iou_threshold = settings.iou_threshold or IOU_THRESHOLD
         self._max_objects = settings.max_objects or MAX_OBJECTS
@@ -103,7 +104,10 @@ class BoxLocator:
                 pad_to_max_output_size=True,
             )
 
-            selected_indices = box_indices[:num_valid]
+            if self._padded_output:
+                selected_indices = box_indices
+            else:
+                selected_indices = box_indices[:num_valid]
 
             selected_boxes = tf.gather(scaled_boxes, selected_indices)
             selected_scores = tf.gather(max_box_scores, selected_indices)
@@ -115,7 +119,10 @@ class BoxLocator:
         final_scores = tf.expand_dims(selected_scores, axis=0, name="scores")
         final_classes = tf.expand_dims(selected_classes, axis=0, name="classes")
 
-        return final_boxes, final_scores, final_classes
+        if self._padded_output:
+            return final_boxes, final_scores, final_classes, num_valid
+        else:
+            return final_boxes, final_scores, final_classes
 
 
 def box_detector(model, input_settings):

@@ -10,6 +10,7 @@ OPTIONAL = {
     "load_pretrained_weights": bool,
     "max_objects": int,
     "output_unfiltered_boxes": bool,
+    "pad_bounding_box_output": bool,
     "regression_normalize": bool,
     "rescale_type": [WARP, PAD, CROP],
 }

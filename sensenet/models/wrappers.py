@@ -222,11 +222,11 @@ class ObjectDetector(SaveableModel):
             if len(input_data.shape) == 4:
                 # [row, h, w, channels]
                 return [self(img) for img in input_data]
-            elif len(input_data.shape) == 3:
+            elif len(input_data.shape) in [2, 3]:
                 prediction = self.load_and_predict([[input_data]])
             else:
                 raise ValueError(
-                    "Input array has len(shape) %d not in [3, 4]"
+                    "Input array has len(shape) %d not in [2, 3, 4]"
                     % len(input_data.shape)
                 )
         else:
@@ -259,7 +259,9 @@ def is_deepnet(model):
 
 
 def bigml_resource(resource):
-    if "deepnet" in resource:
+    if "object" in resource and "deepnet" in resource["object"]:
+        model = resource["object"]["deepnet"]
+    elif "deepnet" in resource:
         model = resource["deepnet"]
     elif "model" in resource:
         model = resource["model"]
