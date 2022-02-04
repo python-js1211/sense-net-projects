@@ -16,11 +16,11 @@ from sensenet import __version__, __tree_ext_prefix__
 here = path.abspath(path.dirname(__file__))
 
 deps = [
-    "importlib-resources>=5.1,<5.2",
+    "importlib-resources>=5.4,<5.5",
     "numpy>=1.19,<1.20",
-    "pillow>=8.2,<8.3",
-    "tensorflow>=2.4,<2.5",
-    "tensorflowjs>=3.4,<3.5",
+    "pillow>=9.0,<9.1",
+    "tensorflow>=2.7,<2.8",
+    "tensorflowjs>=3.13,<3.14",
 ]
 
 # The installation of `tensorflow-gpu` should be specific to canonical
@@ -34,11 +34,11 @@ if any(pkg.key == "tensorflow-gpu" for pkg in pkg_resources.working_set):
 with open(path.join(here, "README.md"), "r") as f:
     long_description = f.read()
 
-compile_args = ["-std=c++11", "-fPIC"] + tf.sysconfig.get_compile_flags()
+compile_args = ["-std=c++14", "-fPIC"] + tf.sysconfig.get_compile_flags()
 
 tree_module = Extension(
     __tree_ext_prefix__,
-    define_macros=[("MAJOR_VERSION", "1"), ("MINOR_VERSION", "0")],
+    define_macros=[("MAJOR_VERSION", "1"), ("MINOR_VERSION", "1")],
     include_dirs=[tf.sysconfig.get_include()],
     library_dirs=[tf.sysconfig.get_lib()],
     extra_compile_args=compile_args,
@@ -57,7 +57,7 @@ setup(
     packages=find_packages(),
     package_data={"sensenet": ["sensenet_metadata.json.gz"]},
     ext_modules=[tree_module],
-    tests_require=["nose>=1.3,<1.4", "scikit-learn>=0.24,<0.25"],
+    tests_require=["nose>=1.3,<1.4", "scikit-learn>=1.0,<1.1"],
     test_suite="nose.collector",
     install_requires=deps,
 )

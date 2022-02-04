@@ -1,6 +1,6 @@
 [build-system]
-requires=["tensorflow <2.5,>=2.4", "setuptools"]
+requires=["tensorflow <2.8,>=2.7", "setuptools"]
 
 [tool.black]
 line-length = 80
-target-version = ['py38']
+target-version = ['py39']

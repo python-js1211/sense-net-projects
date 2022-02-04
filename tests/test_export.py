@@ -54,7 +54,7 @@ def test_tflite_deepnet():
 
 def test_tflite_boxes():
     detector = make_detector("tinyyolov4", True)
-    boxes, scores, classes = convert_and_predict(detector, "strange_car.png")
+    scores, boxes, classes = convert_and_predict(detector, "strange_car.png")
 
     assert boxes.shape == (1, 2535, 4), boxes.shape
     assert classes.shape == (1, 2535), classes.shape

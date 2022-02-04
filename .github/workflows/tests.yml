@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.8]
+        python: [3.9]
     env:
         TF_CPP_MIN_LOG_LEVEL: 2
 
@@ -22,8 +22,8 @@ jobs:
 
     - name: Install test dependencies
       run: |
-        pip install nose
-        pip install "scikit-learn>=0.23,<0.24"
+        pip install pytest
+        pip install "scikit-learn>=1.0,<1.1"
 
     - name: Install sensenet
       run: |
@@ -31,4 +31,4 @@ jobs:
 
     - name: Run sensenet tests
       run: |
-        nosetests -sv
+        pytest -sv

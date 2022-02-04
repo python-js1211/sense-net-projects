@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import pytest
 
 import sensenet.importers
 
@@ -18,12 +19,17 @@ from sensenet.models.settings import Settings
 
 from .utils import TEST_DATA_DIR, read_regression
 
-EMBEDDING = "embedding.json.gz"
-SIMPLE = "regression.json.gz"
-LEGACY = "legacy_regression.json.gz"
 SEARCH = "search_regression.json.gz"
 LEGACY_SEARCH = "legacy_search_regression.json.gz"
 IMAGE = "image_regression.json.gz"
+
+SIMPLE = "regression.json.gz"
+LEGACY = "legacy_regression.json.gz"
+EMBEDDING = "embedding.json.gz"
+
+SIMPLE_RANGE = range(len(read_regression(SIMPLE)))
+LEGACY_RANGE = range(len(read_regression(LEGACY)))
+EMBEDDING_RANGE = range(len(read_regression(EMBEDDING)))
 
 TEMP_WEIGHTS = os.path.join(TEST_DATA_DIR, "test_save_weights.h5")
 TEMP_BUNDLE = os.path.join(TEST_DATA_DIR, "test_save_bundle.smbundle")
@@ -151,18 +157,14 @@ def single_artifact(regression_path, index):
     validate_predictions(test_artifact)
 
 
-def test_simple_networks():
-    rdata = read_regression(SIMPLE)
-
-    for i in range(len(rdata)):
-        yield single_artifact, SIMPLE, i
+@pytest.mark.parametrize("i", SIMPLE_RANGE)
+def test_simple_network(i):
+    single_artifact(SIMPLE, i)
 
 
-def test_legacy_networks():
-    rdata = read_regression(LEGACY)
-
-    for i in range(len(rdata)):
-        yield single_artifact, LEGACY, i
+@pytest.mark.parametrize("i", LEGACY_RANGE)
+def test_legacy_network(i):
+    single_artifact(LEGACY, i)
 
 
 def test_one():
@@ -200,11 +202,9 @@ def single_embedding(index):
     assert np.allclose(tree_result, data_with_trees)
 
 
-def test_embedding():
-    artifact = read_regression(EMBEDDING)
-
-    for i in range(len(artifact)):
-        yield single_embedding, i
+@pytest.mark.parametrize("i", EMBEDDING_RANGE)
+def test_embedding(i):
+    single_embedding(i)
 
 
 def test_search():
