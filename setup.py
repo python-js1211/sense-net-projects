@@ -57,7 +57,5 @@ setup(
     packages=find_packages(),
     package_data={"sensenet": ["sensenet_metadata.json.gz"]},
     ext_modules=[tree_module],
-    tests_require=["nose>=1.3,<1.4", "scikit-learn>=1.0,<1.1"],
-    test_suite="nose.collector",
     install_requires=deps,
 )
