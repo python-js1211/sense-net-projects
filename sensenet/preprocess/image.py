@@ -142,7 +142,7 @@ def make_image_reader(input_format, target_shape, file_prefix, read_settings):
                 path = tf.strings.join([prefix, path_or_bytes])
                 img_bytes = tf.io.read_file(path)
 
-            raw = tf.io.decode_image(img_bytes, channels=n_chan)
+            raw = tf.io.decode_jpeg(img_bytes, dct_method=DCT, channels=n_chan)
 
         return rescale(settings, target_shape, raw)
 

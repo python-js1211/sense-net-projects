@@ -14,6 +14,8 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
 warnings.filterwarnings("ignore", message=".*in favour of importlib.*")
+warnings.filterwarnings("ignore", message=".*is a deprecated alias.*")
+
 
 import numpy
 
