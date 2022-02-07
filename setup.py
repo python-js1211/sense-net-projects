@@ -17,9 +17,9 @@ here = path.abspath(path.dirname(__file__))
 
 deps = [
     "importlib-resources>=5.4,<5.5",
-    "numpy>=1.19,<1.20",
+    "numpy>=1.20,<1.21",
     "pillow>=9.0,<9.1",
-    "tensorflow>=2.7,<2.8",
+    "tensorflow>=2.8,<2.9",
     "tensorflowjs>=3.13,<3.14",
 ]
 

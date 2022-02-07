@@ -8,6 +8,7 @@ import shutil
 
 from PIL import Image
 
+from sensenet.constants import WARP
 from sensenet.models.wrappers import Deepnet, ObjectDetector
 from sensenet.models.wrappers import convert, tflite_predict
 
@@ -25,6 +26,10 @@ def make_classifier(network_name):
 
 def make_detector(network_name, unfiltered):
     filtering = {"output_unfiltered_boxes": unfiltered}
+
+    if unfiltered:
+        filtering["rescale_type"] = WARP
+
     model = create_image_model(network_name, filtering)
 
     return ObjectDetector(model, filtering)
@@ -54,22 +59,28 @@ def test_tflite_deepnet():
 
 def test_tflite_boxes():
     detector = make_detector("tinyyolov4", True)
-    scores, boxes, classes = convert_and_predict(detector, "strange_car.png")
+    scores, boxes, classes = convert_and_predict(detector, "square_car.png")
 
     assert boxes.shape == (1, 2535, 4), boxes.shape
     assert classes.shape == (1, 2535), classes.shape
     assert scores.shape == (1, 2535), scores.shape
 
+    nboxes = 0
+
     for box, cls, score in zip(boxes[0], classes[0], scores[0]):
         # There are a few boxes here, but they should all find the
         # same thing in roughly the same place
         if score > 0.5:
-            assert 550 < box[0] < 600, (box, cls, score)
-            assert 220 < box[1] < 270, (box, cls, score)
-            assert 970 < box[2] < 1020, (box, cls, score)
+            assert 20 < box[0] < 70, (box, cls, score)
+            assert 250 < box[1] < 300, (box, cls, score)
+            assert 440 < box[2] < 490, (box, cls, score)
             assert 390 < box[3] < 440, (box, cls, score)
 
             assert cls == 2
+
+            nboxes += 1
+
+    assert nboxes > 1
 
     shutil.rmtree(TEST_SAVE_MODEL)
 

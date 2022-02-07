@@ -127,7 +127,9 @@ class BoxLocator:
 
 def box_detector(model, input_settings):
     settings = ensure_settings(input_settings)
-    settings.rescale_type = PAD
+
+    if settings.rescale_type is None:
+        settings.rescale_type = PAD
 
     network = model["image_network"]
     reader = BoundingBoxImageReader(network, settings)

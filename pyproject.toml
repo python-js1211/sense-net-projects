@@ -1,5 +1,5 @@
 [build-system]
-requires=["tensorflow <2.8,>=2.7", "setuptools"]
+requires=["tensorflow <2.9,>=2.8", "setuptools"]
 
 [tool.black]
 line-length = 80

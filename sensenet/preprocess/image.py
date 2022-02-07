@@ -142,7 +142,7 @@ def make_image_reader(input_format, target_shape, file_prefix, read_settings):
                 path = tf.strings.join([prefix, path_or_bytes])
                 img_bytes = tf.io.read_file(path)
 
-            raw = tf.io.decode_jpeg(img_bytes, dct_method=DCT, channels=n_chan)
+            raw = tf.io.decode_image(img_bytes, channels=n_chan)
 
         return rescale(settings, target_shape, raw)
 
@@ -168,7 +168,7 @@ class ImageReader:
 class BoundingBoxImageReader(ImageReader):
     def __init__(self, network, settings):
         super(BoundingBoxImageReader, self).__init__(network, settings)
-        self._settings.rescale_type = PAD
+        assert settings.rescale_type is not None
 
     def __call__(self, inputs):
         dims = tf.constant(self._input_shape[1:3], tf.int32)

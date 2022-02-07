@@ -11,11 +11,11 @@ import glob
 from sensenet import __tree_ext_prefix__
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
-warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
-    import numpy
+warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
+warnings.filterwarnings("ignore", message=".*in favour of importlib.*")
+
+import numpy
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", message=".*as a synonym of type.*")

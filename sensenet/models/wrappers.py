@@ -97,15 +97,6 @@ class SaveableModel(object):
             if tfjs_path:
                 self.write_tfjs_files(model_path, tfjs_path)
 
-    def save_tflite(self, save_path):
-        converter = tf.lite.TFLiteConverter.from_keras_model(self._model)
-        tflite_model = converter.convert()
-
-        with open(save_path, "wb") as fout:
-            fout.write(tflite_model)
-
-        return tflite_model
-
     def save_tfjs(self, save_path):
         with tempfile.TemporaryDirectory() as saved_model_temp:
             self.write_raw_bundle(saved_model_temp)
@@ -336,6 +327,14 @@ def create_model(anobject, settings=None):
         raise TypeError("Input argument cannot be a %s" % str(type(anobject)))
 
 
+def to_tflite(model, save_path):
+    converter = tf.lite.TFLiteConverter.from_keras_model(model._model)
+    tflite_model = converter.convert()
+
+    with open(save_path, "wb") as fout:
+        fout.write(tflite_model)
+
+
 def convert(model, settings, output_path, to_format):
     """Convert some structure describing a wrapped model to a given output
     format.
@@ -364,10 +363,14 @@ def convert(model, settings, output_path, to_format):
         model_object = model
     else:
         model_settings = ensure_settings(settings)
+
+        if to_format == "tflite":
+            settings.rescale_type = WARP
+
         model_object = create_model(model, settings=model_settings)
 
     if to_format == "tflite":
-        model_object.save_tflite(output_path)
+        to_tflite(model_object, output_path)
     elif to_format == "tfjs":
         model_object.save_tfjs(output_path)
     elif to_format == "smbundle":
