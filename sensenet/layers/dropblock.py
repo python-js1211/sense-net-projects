@@ -33,7 +33,7 @@ class DropBlock2D(tf.keras.layers.Layer):
         self._padding = [[0, 0], [p0, p1], [p0, p1], [0, 0]]
 
         w, h, block = float(self._w), float(self._h), float(self._block_size)
-        num = (1.0 - self._keep_prob) * (w * h) / (block ** 2)
+        num = (1.0 - self._keep_prob) * (w * h) / (block**2)
         denom = (w - block + 1) * (h - block + 1)
 
         self._gamma = num / denom

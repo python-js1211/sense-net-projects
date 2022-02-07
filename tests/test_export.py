@@ -5,6 +5,7 @@ tf = sensenet.importers.import_tensorflow()
 
 import os
 import shutil
+import warnings
 
 from PIL import Image
 

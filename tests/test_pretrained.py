@@ -164,7 +164,7 @@ def test_yolov4():
 
 
 def test_empty():
-    detector = create_image_model("tinyyolov4",  {"rescale_type": PAD})
+    detector = create_image_model("tinyyolov4", {"rescale_type": PAD})
     image_path = os.path.join(TEST_IMAGE_DATA, "black.png")
     image = load_points([{"type": IMAGE, "index": 0}], [[image_path]])
     boxes, scores, classes = detector.predict(image)
@@ -175,7 +175,7 @@ def test_empty():
 
 
 def test_scaling():
-    detector = create_image_model("tinyyolov4",  {"rescale_type": PAD})
+    detector = create_image_model("tinyyolov4", {"rescale_type": PAD})
     image_path = os.path.join(TEST_IMAGE_DATA, "strange_car.png")
     image = load_points([{"type": IMAGE, "index": 0}], [[image_path]])
     boxes, scores, classes = detector.predict(image)
@@ -190,7 +190,7 @@ def test_scaling():
 
 
 def test_black_and_white():
-    pixel_model = create_image_model("mobilenetv2")
+    pixel_model = create_image_model("mobilenetv2", None)
     image_path = os.path.join(TEST_IMAGE_DATA, "model_t.jpg")
 
     point = load_points([{"type": IMAGE, "index": 0}], [[image_path]])

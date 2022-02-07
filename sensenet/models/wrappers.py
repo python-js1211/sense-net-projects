@@ -2,12 +2,14 @@ import sensenet.importers
 
 np = sensenet.importers.import_numpy()
 tf = sensenet.importers.import_tensorflow()
+tfjs = sensenet.importers.import_tfjs()
 
 import json
 import os
 import shutil
 import tempfile
 import sys
+import warnings
 
 from contextlib import contextmanager
 from PIL import Image
@@ -55,13 +57,13 @@ class SaveableModel(object):
         self._model.save(save_path, include_optimizer=False)
 
     def write_tfjs_files(self, model_path, save_path):
-        # Leave this import unless we absolutely need it
-        import tensorflowjs as tfjs
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*alias for the.*")
 
-        with suppress_stdout():
-            tfjs.converters.convert_tf_saved_model(
-                model_path, save_path, skip_op_check=True
-            )
+            with suppress_stdout():
+                tfjs.converters.convert_tf_saved_model(
+                    model_path, save_path, skip_op_check=True
+                )
 
     def save_bundle(self, save_path, tfjs_path=None):
         outdir, model_name = os.path.split(save_path)

@@ -14,7 +14,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
 warnings.filterwarnings("ignore", message=".*in favour of importlib.*")
-warnings.filterwarnings("ignore", message=".*is a deprecated alias.*")
+warnings.filterwarnings("ignore", message=".*alias for the builtin.*")
 
 
 import numpy
@@ -22,8 +22,11 @@ import numpy
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", message=".*as a synonym of type.*")
     warnings.filterwarnings("ignore", message=".*binary incompatibility.*")
+    warnings.filterwarnings("ignore", message=".*details.*")
+
     import tensorflow
     import tensorflow.keras.layers
+    import tensorflowjs
 
 bigml_tf_module = None
 
@@ -47,3 +50,7 @@ def import_keras_layers():
 
 def import_numpy():
     return numpy
+
+
+def import_tfjs():
+    return tensorflowjs
