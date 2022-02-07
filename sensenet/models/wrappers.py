@@ -14,7 +14,7 @@ import warnings
 from contextlib import contextmanager
 from PIL import Image
 
-from sensenet.constants import NUMERIC_INPUTS, IMAGE
+from sensenet.constants import NUMERIC_INPUTS, IMAGE, WARP
 
 from sensenet.accessors import is_yolo_model, get_output_exposition
 from sensenet.load import load_points, count_types

@@ -15,11 +15,14 @@ from sensenet import __version__, __tree_ext_prefix__
 
 here = path.abspath(path.dirname(__file__))
 
+TF_VER = ">=2.8,<2.9"
+M1 = "sys_platform=='Darwin' and platform_machine=='arm64'"
+OTHER = "sys_platform!='Darwin' or platform_machine!='arm64'"
+
 deps = [
     "importlib-resources>=5.4,<5.5",
     "numpy>=1.20,<1.21",
     "pillow>=9.0,<9.1",
-    "tensorflow>=2.8,<2.9",
     "tensorflowjs>=3.13,<3.14",
 ]
 
@@ -27,8 +30,11 @@ deps = [
 # docker images distributed by the Tensorflow team.  If they've
 # installed tensorflow-gpu, we shouldn't try to install tensorflow on
 # top of them.
-if any(pkg.key == "tensorflow-gpu" for pkg in pkg_resources.working_set):
-    deps = list(filter(lambda d: not d.startswith("tensorflow>="), deps))
+if not any(pkg.key == "tensorflow-gpu" for pkg in pkg_resources.working_set):
+    deps += [
+        "tensorflow-macos%s;%s" % (TF_VER, M1),
+        "tensorflow%s;%s" % (TF_VER, OTHER),
+    ]
 
 # Get the long description from the relevant file
 with open(path.join(here, "README.md"), "r") as f:
