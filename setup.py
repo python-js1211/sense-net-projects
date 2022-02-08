@@ -32,6 +32,7 @@ deps = [
 # top of them.
 if not any(pkg.key == "tensorflow-gpu" for pkg in pkg_resources.working_set):
     deps += [
+        # MacOS running on the M1 has a specific tensorflow build
         "tensorflow-macos%s;%s" % (TF_VER, M1),
         "tensorflow%s;%s" % (TF_VER, OTHER),
     ]
