@@ -5,7 +5,8 @@ tf = sensenet.importers.import_tensorflow()
 
 import os
 import shutil
-import warnings
+import gzip
+import json
 
 from PIL import Image
 
@@ -16,6 +17,7 @@ from sensenet.models.wrappers import convert, tflite_predict
 from .utils import TEST_DATA_DIR, TEST_IMAGE_DATA
 from .test_pretrained import create_image_model
 
+MOBILENET_PATH = os.path.join(TEST_DATA_DIR, "mobilenetv2.json.gz")
 TEST_SAVE_MODEL = os.path.join(TEST_DATA_DIR, "test_model_save")
 TEST_TF_LITE_MODEL = os.path.join(TEST_SAVE_MODEL, "model.tflite")
 
@@ -107,3 +109,17 @@ def test_tfjs_boxes():
     # must also set the `bounding_boxes` variable to true in the test
     # script.
     shutil.rmtree(TEST_SAVE_MODEL, ignore_errors=True)
+
+
+def test_all_conversions():
+    with gzip.open(MOBILENET_PATH, "rb") as fin:
+        jmodel = json.load(fin)
+
+    for aformat in ["tflite", "tfjs", "smbundle", "h5"]:
+        outpath = TEST_SAVE_MODEL + "." + aformat
+        convert(jmodel, None, outpath, aformat)
+
+        if aformat == "tfjs":
+            shutil.rmtree(outpath)
+        else:
+            os.remove(outpath)

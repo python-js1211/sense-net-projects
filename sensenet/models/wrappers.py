@@ -14,7 +14,7 @@ import warnings
 from contextlib import contextmanager
 from PIL import Image
 
-from sensenet.constants import NUMERIC_INPUTS, IMAGE, WARP
+from sensenet.constants import NUMERIC_INPUTS, IMAGE, WARP, PAD
 
 from sensenet.accessors import is_yolo_model, get_output_exposition
 from sensenet.load import load_points, count_types
@@ -358,6 +358,14 @@ def convert(model, settings, output_path, to_format):
     only the weights of the model in keras h5 format without saving
     the layer configs.
 
+    Importantly, `tflite` conversions are not able to work with models
+    that scale in input image in a way that does not maintain the
+    aspect ratio (i.e., via cropping or padding).  Thus, conversions
+    to tflite automatically set the `rescale_type` to "warp" as this
+    is the only accepted value.  If the input `model` is a type that
+    has already set the `rescale_type`, such as a bundled saved model,
+    or one of the model wrapper classes, the conversion will fail.
+
     On completion, the requested file is written to the provided path.
 
     """
@@ -367,7 +375,7 @@ def convert(model, settings, output_path, to_format):
         model_settings = ensure_settings(settings)
 
         if to_format == "tflite":
-            settings.rescale_type = WARP
+            model_settings.rescale_type = WARP
 
         model_object = create_model(model, settings=model_settings)
 
