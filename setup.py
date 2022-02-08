@@ -21,7 +21,7 @@ OTHER = "sys_platform!='Darwin' or platform_machine!='arm64'"
 
 deps = [
     "importlib-resources>=5.4,<5.5",
-    "numpy>=1.20,<1.21",
+    "numpy>=1.21,<1.22",
     "pillow>=9.0,<9.1",
     "tensorflowjs>=3.13,<3.14",
 ]
